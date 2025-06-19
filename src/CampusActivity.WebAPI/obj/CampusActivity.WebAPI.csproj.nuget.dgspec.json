@@ -1,0 +1,445 @@
+{
+  "format": 1,
+  "restore": {
+    "E:\\文件\\学习\\大三下\\.NET\\期末作业\\CampusActivitySystem\\src\\CampusActivity.WebAPI\\CampusActivity.WebAPI.csproj": {}
+  },
+  "projects": {
+    "E:\\文件\\学习\\大三下\\.NET\\期末作业\\CampusActivitySystem\\src\\CampusActivity.Application\\CampusActivity.Application.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "E:\\文件\\学习\\大三下\\.NET\\期末作业\\CampusActivitySystem\\src\\CampusActivity.Application\\CampusActivity.Application.csproj",
+        "projectName": "CampusActivity.Application",
+        "projectPath": "E:\\文件\\学习\\大三下\\.NET\\期末作业\\CampusActivitySystem\\src\\CampusActivity.Application\\CampusActivity.Application.csproj",
+        "packagesPath": "C:\\Users\\96958\\.nuget\\packages\\",
+        "outputPath": "E:\\文件\\学习\\大三下\\.NET\\期末作业\\CampusActivitySystem\\src\\CampusActivity.Application\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\96958\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "C:\\Program Files\\dotnet\\library-packs": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "E:\\文件\\学习\\大三下\\.NET\\期末作业\\CampusActivitySystem\\src\\CampusActivity.Domain\\CampusActivity.Domain.csproj": {
+                "projectPath": "E:\\文件\\学习\\大三下\\.NET\\期末作业\\CampusActivitySystem\\src\\CampusActivity.Domain\\CampusActivity.Domain.csproj"
+              },
+              "E:\\文件\\学习\\大三下\\.NET\\期末作业\\CampusActivitySystem\\src\\CampusActivity.Infrastructure\\CampusActivity.Infrastructure.csproj": {
+                "projectPath": "E:\\文件\\学习\\大三下\\.NET\\期末作业\\CampusActivitySystem\\src\\CampusActivity.Infrastructure\\CampusActivity.Infrastructure.csproj"
+              },
+              "E:\\文件\\学习\\大三下\\.NET\\期末作业\\CampusActivitySystem\\src\\CampusActivity.Shared\\CampusActivity.Shared.csproj": {
+                "projectPath": "E:\\文件\\学习\\大三下\\.NET\\期末作业\\CampusActivitySystem\\src\\CampusActivity.Shared\\CampusActivity.Shared.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        }
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "AutoMapper": {
+              "target": "Package",
+              "version": "[12.0.1, )"
+            },
+            "AutoMapper.Extensions.Microsoft.DependencyInjection": {
+              "target": "Package",
+              "version": "[12.0.1, )"
+            },
+            "BCrypt.Net-Next": {
+              "target": "Package",
+              "version": "[4.0.3, )"
+            },
+            "FluentValidation": {
+              "target": "Package",
+              "version": "[11.8.0, )"
+            },
+            "FluentValidation.DependencyInjectionExtensions": {
+              "target": "Package",
+              "version": "[11.8.0, )"
+            },
+            "Microsoft.AspNetCore.Authentication.JwtBearer": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "Microsoft.Extensions.Caching.Abstractions": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "Microsoft.Extensions.Configuration.Abstractions": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "Microsoft.Extensions.Logging.Abstractions": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "System.IdentityModel.Tokens.Jwt": {
+              "target": "Package",
+              "version": "[8.0.3, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.302/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "E:\\文件\\学习\\大三下\\.NET\\期末作业\\CampusActivitySystem\\src\\CampusActivity.Domain\\CampusActivity.Domain.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "E:\\文件\\学习\\大三下\\.NET\\期末作业\\CampusActivitySystem\\src\\CampusActivity.Domain\\CampusActivity.Domain.csproj",
+        "projectName": "CampusActivity.Domain",
+        "projectPath": "E:\\文件\\学习\\大三下\\.NET\\期末作业\\CampusActivitySystem\\src\\CampusActivity.Domain\\CampusActivity.Domain.csproj",
+        "packagesPath": "C:\\Users\\96958\\.nuget\\packages\\",
+        "outputPath": "E:\\文件\\学习\\大三下\\.NET\\期末作业\\CampusActivitySystem\\src\\CampusActivity.Domain\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\96958\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "C:\\Program Files\\dotnet\\library-packs": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "E:\\文件\\学习\\大三下\\.NET\\期末作业\\CampusActivitySystem\\src\\CampusActivity.Shared\\CampusActivity.Shared.csproj": {
+                "projectPath": "E:\\文件\\学习\\大三下\\.NET\\期末作业\\CampusActivitySystem\\src\\CampusActivity.Shared\\CampusActivity.Shared.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        }
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.302/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "E:\\文件\\学习\\大三下\\.NET\\期末作业\\CampusActivitySystem\\src\\CampusActivity.Infrastructure\\CampusActivity.Infrastructure.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "E:\\文件\\学习\\大三下\\.NET\\期末作业\\CampusActivitySystem\\src\\CampusActivity.Infrastructure\\CampusActivity.Infrastructure.csproj",
+        "projectName": "CampusActivity.Infrastructure",
+        "projectPath": "E:\\文件\\学习\\大三下\\.NET\\期末作业\\CampusActivitySystem\\src\\CampusActivity.Infrastructure\\CampusActivity.Infrastructure.csproj",
+        "packagesPath": "C:\\Users\\96958\\.nuget\\packages\\",
+        "outputPath": "E:\\文件\\学习\\大三下\\.NET\\期末作业\\CampusActivitySystem\\src\\CampusActivity.Infrastructure\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\96958\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "C:\\Program Files\\dotnet\\library-packs": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "E:\\文件\\学习\\大三下\\.NET\\期末作业\\CampusActivitySystem\\src\\CampusActivity.Domain\\CampusActivity.Domain.csproj": {
+                "projectPath": "E:\\文件\\学习\\大三下\\.NET\\期末作业\\CampusActivitySystem\\src\\CampusActivity.Domain\\CampusActivity.Domain.csproj"
+              },
+              "E:\\文件\\学习\\大三下\\.NET\\期末作业\\CampusActivitySystem\\src\\CampusActivity.Shared\\CampusActivity.Shared.csproj": {
+                "projectPath": "E:\\文件\\学习\\大三下\\.NET\\期末作业\\CampusActivitySystem\\src\\CampusActivity.Shared\\CampusActivity.Shared.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        }
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "BCrypt.Net-Next": {
+              "target": "Package",
+              "version": "[4.0.3, )"
+            },
+            "Microsoft.AspNetCore.Authentication.JwtBearer": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "Microsoft.EntityFrameworkCore": {
+              "target": "Package",
+              "version": "[8.0.2, )"
+            },
+            "Microsoft.EntityFrameworkCore.Design": {
+              "target": "Package",
+              "version": "[8.0.2, )"
+            },
+            "Microsoft.Extensions.Caching.StackExchangeRedis": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "Pomelo.EntityFrameworkCore.MySql": {
+              "target": "Package",
+              "version": "[8.0.2, )"
+            },
+            "System.IdentityModel.Tokens.Jwt": {
+              "target": "Package",
+              "version": "[8.0.3, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.302/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "E:\\文件\\学习\\大三下\\.NET\\期末作业\\CampusActivitySystem\\src\\CampusActivity.Shared\\CampusActivity.Shared.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "E:\\文件\\学习\\大三下\\.NET\\期末作业\\CampusActivitySystem\\src\\CampusActivity.Shared\\CampusActivity.Shared.csproj",
+        "projectName": "CampusActivity.Shared",
+        "projectPath": "E:\\文件\\学习\\大三下\\.NET\\期末作业\\CampusActivitySystem\\src\\CampusActivity.Shared\\CampusActivity.Shared.csproj",
+        "packagesPath": "C:\\Users\\96958\\.nuget\\packages\\",
+        "outputPath": "E:\\文件\\学习\\大三下\\.NET\\期末作业\\CampusActivitySystem\\src\\CampusActivity.Shared\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\96958\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "C:\\Program Files\\dotnet\\library-packs": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        }
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.302/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "E:\\文件\\学习\\大三下\\.NET\\期末作业\\CampusActivitySystem\\src\\CampusActivity.WebAPI\\CampusActivity.WebAPI.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "E:\\文件\\学习\\大三下\\.NET\\期末作业\\CampusActivitySystem\\src\\CampusActivity.WebAPI\\CampusActivity.WebAPI.csproj",
+        "projectName": "CampusActivity.WebAPI",
+        "projectPath": "E:\\文件\\学习\\大三下\\.NET\\期末作业\\CampusActivitySystem\\src\\CampusActivity.WebAPI\\CampusActivity.WebAPI.csproj",
+        "packagesPath": "C:\\Users\\96958\\.nuget\\packages\\",
+        "outputPath": "E:\\文件\\学习\\大三下\\.NET\\期末作业\\CampusActivitySystem\\src\\CampusActivity.WebAPI\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\96958\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "C:\\Program Files\\dotnet\\library-packs": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "E:\\文件\\学习\\大三下\\.NET\\期末作业\\CampusActivitySystem\\src\\CampusActivity.Application\\CampusActivity.Application.csproj": {
+                "projectPath": "E:\\文件\\学习\\大三下\\.NET\\期末作业\\CampusActivitySystem\\src\\CampusActivity.Application\\CampusActivity.Application.csproj"
+              },
+              "E:\\文件\\学习\\大三下\\.NET\\期末作业\\CampusActivitySystem\\src\\CampusActivity.Infrastructure\\CampusActivity.Infrastructure.csproj": {
+                "projectPath": "E:\\文件\\学习\\大三下\\.NET\\期末作业\\CampusActivitySystem\\src\\CampusActivity.Infrastructure\\CampusActivity.Infrastructure.csproj"
+              },
+              "E:\\文件\\学习\\大三下\\.NET\\期末作业\\CampusActivitySystem\\src\\CampusActivity.Shared\\CampusActivity.Shared.csproj": {
+                "projectPath": "E:\\文件\\学习\\大三下\\.NET\\期末作业\\CampusActivitySystem\\src\\CampusActivity.Shared\\CampusActivity.Shared.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        }
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "Microsoft.AspNetCore.Authentication.JwtBearer": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "Microsoft.AspNetCore.OpenApi": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "Microsoft.EntityFrameworkCore.Design": {
+              "target": "Package",
+              "version": "[8.0.2, )"
+            },
+            "Microsoft.Extensions.Caching.StackExchangeRedis": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "Serilog.AspNetCore": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "Swashbuckle.AspNetCore": {
+              "target": "Package",
+              "version": "[6.5.0, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.AspNetCore.App": {
+              "privateAssets": "none"
+            },
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.302/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}

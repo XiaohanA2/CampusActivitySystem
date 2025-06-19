@@ -1,0 +1,6 @@
+@CampusActivity.WebAPI_HostAddress = http://localhost:5100
+
+GET {{CampusActivity.WebAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

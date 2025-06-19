@@ -1,0 +1,122 @@
+﻿@page "/"
+
+<PageTitle>校园活动管理系统</PageTitle>
+
+<div class="container">
+    <div class="jumbotron">
+        <h1 class="display-4">欢迎来到校园活动管理系统</h1>
+        <p class="lead">发现精彩校园活动，丰富你的大学生活！</p>
+        <hr class="my-4">
+        <p>这里有最新的校园活动信息、智能推荐系统，以及便捷的报名功能。</p>
+        <AuthorizeView>
+            <NotAuthorized>
+                <a class="btn btn-primary btn-lg" href="/login" role="button">立即登录</a>
+                <a class="btn btn-outline-secondary btn-lg ms-2" href="/register" role="button">注册账号</a>
+            </NotAuthorized>
+        </AuthorizeView>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <h3>🔥 热门活动</h3>
+            @if (popularActivities != null && popularActivities.Any())
+            {
+                <div class="row">
+                    @foreach (var activity in popularActivities.Take(4))
+                    {
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title">@activity.Title</h6>
+                                    <p class="card-text text-muted small">
+                                        📅 @activity.StartTime.ToString("yyyy-MM-dd HH:mm")<br/>
+                                        📍 @activity.Location<br/>
+                                        👥 @activity.CurrentParticipants/@activity.MaxParticipants 人
+                                    </p>
+                                    <a href="/activities/@activity.Id" class="btn btn-sm btn-outline-primary">查看详情</a>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <p class="text-muted">暂无热门活动</p>
+            }
+        </div>
+
+        <div class="col-md-6">
+            <AuthorizeView>
+                <Authorized>
+                    <h3>💡 为你推荐</h3>
+                    @if (recommendedActivities != null && recommendedActivities.Any())
+                    {
+                        <div class="row">
+                            @foreach (var activity in recommendedActivities.Take(4))
+                            {
+                                <div class="col-md-6 mb-3">
+                                    <div class="card h-100">
+                                        <div class="card-body">
+                                            <h6 class="card-title">@activity.Title</h6>
+                                            <p class="card-text text-muted small">
+                                                📅 @activity.StartTime.ToString("yyyy-MM-dd HH:mm")<br/>
+                                                📍 @activity.Location<br/>
+                                                👥 @activity.CurrentParticipants/@activity.MaxParticipants 人
+                                            </p>
+                                            <a href="/activities/@activity.Id" class="btn btn-sm btn-outline-success">查看详情</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted">暂无推荐活动</p>
+                    }
+                </Authorized>
+                <NotAuthorized>
+                    <h3>📱 功能特色</h3>
+                    <ul class="list-group">
+                        <li class="list-group-item">🎯 智能推荐算法，精准匹配你的兴趣</li>
+                        <li class="list-group-item">📊 活动数据分析，了解参与趋势</li>
+                        <li class="list-group-item">💬 实时报名状态，随时掌握活动动态</li>
+                        <li class="list-group-item">🔔 活动提醒功能，不错过任何精彩</li>
+                    </ul>
+                </NotAuthorized>
+            </AuthorizeView>
+        </div>
+    </div>
+</div>
+
+@code {
+    private IEnumerable<ActivityDto>? popularActivities;
+    private IEnumerable<ActivityDto>? recommendedActivities;
+
+    [Inject] private IActivityService ActivityService { get; set; } = default!;
+    [Inject] private IRecommendationService RecommendationService { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // 加载热门活动
+        try
+        {
+            popularActivities = await ActivityService.GetPopularActivitiesAsync(8);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to load popular activities: {ex.Message}");
+        }
+
+        // 加载推荐活动（仅对已登录用户）
+        try
+        {
+            recommendedActivities = await RecommendationService.GetRecommendationsAsync(8);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to load recommended activities: {ex.Message}");
+        }
+    }
+}

@@ -1,0 +1,37 @@
+@page "/test"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+
+<PageTitle>认证测试页面</PageTitle>
+
+<h3>认证测试页面</h3>
+
+<AuthorizeView>
+    <Authorized Context="authContext">
+        <div class="alert alert-success">
+            <h4>认证成功！</h4>
+            <p>用户名: @authContext.User.Identity?.Name</p>
+            <p>认证类型: @authContext.User.Identity?.AuthenticationType</p>
+            <p>是否已认证: @authContext.User.Identity?.IsAuthenticated</p>
+            
+            <h5>用户声明:</h5>
+            <ul>
+                @foreach (var claim in authContext.User.Claims)
+                {
+                    <li><strong>@claim.Type:</strong> @claim.Value</li>
+                }
+            </ul>
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <div class="alert alert-warning">
+            <h4>未认证</h4>
+            <p>您需要先登录才能访问此页面。</p>
+            <a href="/login" class="btn btn-primary">去登录</a>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+
+} 

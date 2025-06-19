@@ -1,0 +1,209 @@
+@page "/activities"
+
+<PageTitle>活动列表</PageTitle>
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+            <h2>校园活动</h2>
+            
+            <!-- 搜索筛选区域 -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label class="form-label">关键词</label>
+                            <input type="text" class="form-control" @bind="searchDto.Keyword" placeholder="搜索活动标题或描述..." />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">活动分类</label>
+                            <select class="form-select" @bind="searchDto.CategoryId">
+                                <option value="">全部分类</option>
+                                @if (categories != null)
+                                {
+                                    @foreach (var category in categories)
+                                    {
+                                        <option value="@category.Id">@category.Name</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">开始日期</label>
+                            <input type="date" class="form-control" @bind="searchDto.StartDate" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">&nbsp;</label>
+                            <div>
+                                <button class="btn btn-primary" @onclick="SearchActivities">搜索</button>
+                                <button class="btn btn-outline-secondary" @onclick="ClearSearch">清空</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" @bind="searchDto.IsRegisterable" id="isRegisterable">
+                                <label class="form-check-label" for="isRegisterable">
+                                    仅显示可报名活动
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 活动列表 -->
+            @if (isLoading)
+            {
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">加载中...</span>
+                    </div>
+                </div>
+            }
+            else if (activities?.Items != null && activities.Items.Any())
+            {
+                <div class="row">
+                    @foreach (var activity in activities.Items)
+                    {
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">@activity.Title</h5>
+                                    <p class="card-text">@activity.Description</p>
+                                    <div class="small text-muted">
+                                        <div><i class="oi oi-calendar"></i> @activity.StartTime.ToString("yyyy-MM-dd HH:mm")</div>
+                                        <div><i class="oi oi-location"></i> @activity.Location</div>
+                                        <div><i class="oi oi-people"></i> @activity.CurrentParticipants/@activity.MaxParticipants 人</div>
+                                        <div><i class="oi oi-tag"></i> @activity.CategoryName</div>
+                                    </div>
+                                    <div class="mt-2">
+                                        @foreach (var tag in activity.Tags)
+                                        {
+                                            <span class="badge bg-secondary me-1">@tag</span>
+                                        }
+                                    </div>
+                                </div>
+                                <div class="card-footer">
+                                    <a href="/activities/@activity.Id" class="btn btn-primary">查看详情</a>
+                                    @if (activity.Status == ActivityStatus.Published && 
+                                         activity.RegistrationDeadline > DateTime.Now && 
+                                         activity.CurrentParticipants < activity.MaxParticipants)
+                                    {
+                                        <span class="badge bg-success ms-2">可报名</span>
+                                    }
+                                    else if (activity.CurrentParticipants >= activity.MaxParticipants)
+                                    {
+                                        <span class="badge bg-warning ms-2">已满员</span>
+                                    }
+                                    else if (activity.RegistrationDeadline <= DateTime.Now)
+                                    {
+                                        <span class="badge bg-danger ms-2">已截止</span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <!-- 分页 -->
+                @if (activities.TotalCount > searchDto.PageSize)
+                {
+                    <nav aria-label="活动分页">
+                        <ul class="pagination justify-content-center">
+                            <li class="page-item @(searchDto.PageIndex <= 1 ? "disabled" : "")">
+                                <button class="page-link" @onclick="() => GoToPage(searchDto.PageIndex - 1)">上一页</button>
+                            </li>
+                            
+                            @for (int i = Math.Max(1, searchDto.PageIndex - 2); i <= Math.Min(totalPages, searchDto.PageIndex + 2); i++)
+                            {
+                                int pageNumber = i;
+                                <li class="page-item @(searchDto.PageIndex == pageNumber ? "active" : "")">
+                                    <button class="page-link" @onclick="() => GoToPage(pageNumber)">@pageNumber</button>
+                                </li>
+                            }
+                            
+                            <li class="page-item @(searchDto.PageIndex >= totalPages ? "disabled" : "")">
+                                <button class="page-link" @onclick="() => GoToPage(searchDto.PageIndex + 1)">下一页</button>
+                            </li>
+                        </ul>
+                    </nav>
+                    
+                    <div class="text-center text-muted">
+                        共 @activities.TotalCount 个活动，第 @searchDto.PageIndex/@totalPages 页
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="text-center">
+                    <p class="text-muted">暂无活动数据</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private PagedResultDto<ActivityDto>? activities;
+    private IEnumerable<ActivityCategoryDto>? categories;
+    private ActivitySearchDto searchDto = new() { PageIndex = 1, PageSize = 12, SortBy = "StartTime" };
+    private bool isLoading = false;
+    private int totalPages => activities != null ? (int)Math.Ceiling((double)activities.TotalCount / searchDto.PageSize) : 0;
+
+    [Inject] private IActivityService ActivityService { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCategories();
+        await LoadActivities();
+    }
+
+    private async Task LoadCategories()
+    {
+        try
+        {
+            categories = await ActivityService.GetCategoriesAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to load categories: {ex.Message}");
+        }
+    }
+
+    private async Task LoadActivities()
+    {
+        try
+        {
+            isLoading = true;
+            activities = await ActivityService.GetActivitiesAsync(searchDto);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to load activities: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task SearchActivities()
+    {
+        searchDto.PageIndex = 1;
+        await LoadActivities();
+    }
+
+    private async Task ClearSearch()
+    {
+        searchDto = new ActivitySearchDto { PageIndex = 1, PageSize = 12, SortBy = "StartTime" };
+        await LoadActivities();
+    }
+
+    private async Task GoToPage(int pageNumber)
+    {
+        searchDto.PageIndex = pageNumber;
+        await LoadActivities();
+    }
+} 

@@ -1,0 +1,100 @@
+@page "/api-test"
+@using CampusActivity.Shared.DTOs
+@inject HttpClient Http
+@inject IConfiguration Config
+
+<PageTitle>API连接测试</PageTitle>
+
+<h3>API连接测试</h3>
+
+<div class="card">
+    <div class="card-body">
+        <h5>配置信息</h5>
+        <p><strong>API基础URL:</strong> @apiBaseUrl</p>
+        <p><strong>当前时间:</strong> @DateTime.Now</p>
+        
+        <button class="btn btn-primary" @onclick="TestApiConnection">测试API连接</button>
+        <button class="btn btn-secondary ms-2" @onclick="TestRecommendations">测试推荐API</button>
+        
+        <div class="mt-3">
+            <h6>测试结果:</h6>
+            <div class="border p-3" style="height: 300px; overflow-y: auto;">
+                @foreach (var log in testLogs)
+                {
+                    <div class="small">@log</div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string apiBaseUrl = "";
+    private List<string> testLogs = new();
+
+    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
+
+    protected override void OnInitialized()
+    {
+        apiBaseUrl = Config["ApiSettings:BaseUrl"] ?? "未配置";
+        AddLog($"页面初始化完成，API基础URL: {apiBaseUrl}");
+    }
+
+    private async Task TestApiConnection()
+    {
+        AddLog("开始测试API连接...");
+        
+        try
+        {
+            var client = HttpClientFactory.CreateClient("CampusActivityAPI");
+            AddLog($"HTTP客户端基础地址: {client.BaseAddress}");
+            
+            var response = await client.GetAsync("api/test");
+            AddLog($"响应状态码: {response.StatusCode}");
+            
+            var content = await response.Content.ReadAsStringAsync();
+            AddLog($"响应内容: {content.Substring(0, Math.Min(content.Length, 200))}...");
+        }
+        catch (Exception ex)
+        {
+            AddLog($"API连接测试失败: {ex.Message}");
+            AddLog($"异常类型: {ex.GetType().Name}");
+        }
+    }
+
+    private async Task TestRecommendations()
+    {
+        AddLog("开始测试推荐API...");
+        
+        try
+        {
+            var client = HttpClientFactory.CreateClient("CampusActivityAPI");
+            AddLog($"HTTP客户端基础地址: {client.BaseAddress}");
+            
+            var response = await client.GetAsync("api/recommendations?count=5");
+            AddLog($"推荐API响应状态码: {response.StatusCode}");
+            
+            var content = await response.Content.ReadAsStringAsync();
+            AddLog($"推荐API响应内容类型: {response.Content.Headers.ContentType}");
+            AddLog($"推荐API响应内容长度: {content.Length}");
+            AddLog($"推荐API响应内容前200字符: {content.Substring(0, Math.Min(content.Length, 200))}");
+            
+            if (content.StartsWith("<"))
+            {
+                AddLog("⚠️ 检测到HTML响应，这可能是问题所在！");
+            }
+        }
+        catch (Exception ex)
+        {
+            AddLog($"推荐API测试失败: {ex.Message}");
+            AddLog($"异常类型: {ex.GetType().Name}");
+            AddLog($"异常详情: {ex}");
+        }
+    }
+
+    private void AddLog(string message)
+    {
+        testLogs.Insert(0, $"[{DateTime.Now:HH:mm:ss}] {message}");
+        StateHasChanged();
+    }
+} 

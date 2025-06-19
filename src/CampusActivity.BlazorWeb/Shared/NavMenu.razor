@@ -1,0 +1,76 @@
+﻿<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">校园活动系统</a>
+        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+    </div>
+</div>
+
+<div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
+    <nav class="flex-column">
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="oi oi-home" aria-hidden="true"></span> 首页
+            </NavLink>
+        </div>
+        
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="activities">
+                <span class="oi oi-calendar" aria-hidden="true"></span> 活动列表
+            </NavLink>
+        </div>
+
+        <AuthorizeView Roles="Student">
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="my-activities">
+                    <span class="oi oi-list-rich" aria-hidden="true"></span> 我的活动
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="recommendations">
+                    <span class="oi oi-star" aria-hidden="true"></span> 推荐活动
+                </NavLink>
+            </div>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="Teacher,Admin">
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="manage-activities">
+                    <span class="oi oi-pencil" aria-hidden="true"></span> 管理活动
+                </NavLink>
+            </div>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="Admin">
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="admin">
+                    <span class="oi oi-cog" aria-hidden="true"></span> 系统管理
+                </NavLink>
+            </div>
+        </AuthorizeView>
+
+        <!-- 开发测试页面 -->
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="test">
+                <span class="oi oi-shield" aria-hidden="true"></span> 认证测试
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="api-test">
+                <span class="oi oi-wrench" aria-hidden="true"></span> API测试
+            </NavLink>
+        </div>
+    </nav>
+</div>
+
+@code {
+    private bool collapseNavMenu = true;
+
+    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+}
