@@ -1,0 +1,390 @@
+@page "/activities/{Id:int}"
+@using CampusActivity.Shared.DTOs
+@inject IActivityService ActivityService
+@inject IScheduleService ScheduleService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+<PageTitle>@(activity?.Title ?? "活动详情")</PageTitle>
+
+<div class="container mt-4">
+    @if (isLoading)
+    {
+        <div class="text-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">加载中...</span>
+            </div>
+        </div>
+    }
+    else if (activity != null)
+    {
+        <div class="row">
+            <!-- 活动详情 -->
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>@activity.Title</h3>
+                    </div>
+                    <div class="card-body">
+                        @if (!string.IsNullOrEmpty(activity.ImageUrl))
+                        {
+                            <img src="@activity.ImageUrl" class="img-fluid mb-3" alt="@activity.Title" />
+                        }
+                        
+                        <div class="mb-3">
+                            <h5>活动描述</h5>
+                            <p>@activity.Description</p>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5>活动信息</h5>
+                                <ul class="list-unstyled">
+                                    <li><i class="oi oi-calendar"></i> <strong>开始时间:</strong> @activity.StartTime.ToString("yyyy-MM-dd HH:mm")</li>
+                                    <li><i class="oi oi-calendar"></i> <strong>结束时间:</strong> @activity.EndTime.ToString("yyyy-MM-dd HH:mm")</li>
+                                    <li><i class="oi oi-location"></i> <strong>地点:</strong> @activity.Location</li>
+                                    <li><i class="oi oi-people"></i> <strong>参与人数:</strong> @activity.CurrentParticipants/@activity.MaxParticipants</li>
+                                    <li><i class="oi oi-tag"></i> <strong>分类:</strong> @activity.CategoryName</li>
+                                    <li><i class="oi oi-person"></i> <strong>创建者:</strong> @activity.CreatedByName</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h5>报名信息</h5>
+                                <ul class="list-unstyled">
+                                    <li><i class="oi oi-clock"></i> <strong>报名截止:</strong> @activity.RegistrationDeadline.ToString("yyyy-MM-dd HH:mm")</li>
+                                    <li><i class="oi oi-calendar"></i> <strong>创建时间:</strong> @activity.CreatedAt.ToString("yyyy-MM-dd")</li>
+                                    <li><i class="oi oi-calendar"></i> <strong>更新时间:</strong> @activity.UpdatedAt.ToString("yyyy-MM-dd")</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        @if (activity.Tags.Any())
+                        {
+                            <div class="mb-3">
+                                <h5>活动标签</h5>
+                                @foreach (var tag in activity.Tags)
+                                {
+                                    <span class="badge bg-secondary me-1">@tag</span>
+                                }
+                            </div>
+                        }
+
+                        @if (activity.RecommendationScore.HasValue)
+                        {
+                            <div class="mb-3">
+                                <h5>推荐指数</h5>
+                                <div class="progress">
+                                    <div class="progress-bar" role="progressbar" 
+                                         style="width: @(activity.RecommendationScore.Value * 100)%"
+                                         aria-valuenow="@(activity.RecommendationScore.Value * 100)" 
+                                         aria-valuemin="0" aria-valuemax="100">
+                                        @(activity.RecommendationScore.Value * 100)%
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- 侧边栏 -->
+            <div class="col-md-4">
+                <!-- 报名状态 -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5>报名状态</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (activity.IsRegistered)
+                        {
+                            <div class="alert alert-success">
+                                <i class="oi oi-check"></i> 您已报名此活动
+                            </div>
+                            <button class="btn btn-outline-danger w-100 mb-2" @onclick="CancelRegistration">
+                                <i class="oi oi-x"></i> 取消报名
+                            </button>
+                            <button class="btn btn-outline-primary w-100" @onclick="AddToSchedule">
+                                <i class="oi oi-calendar"></i> 添加到日程表
+                            </button>
+                        }
+                        else
+                        {
+                            @if (CanRegister())
+                            {
+                                <div class="alert alert-info">
+                                    <i class="oi oi-info"></i> 此活动可以报名
+                                </div>
+                                <button class="btn btn-success w-100 mb-2" @onclick="ShowRegistrationModal">
+                                    <i class="oi oi-plus"></i> 立即报名
+                                </button>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" @bind="addToScheduleOnRegister" id="addToSchedule">
+                                    <label class="form-check-label" for="addToSchedule">
+                                        报名后自动添加到日程表
+                                    </label>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="alert alert-warning">
+                                    <i class="oi oi-warning"></i> @GetRegistrationStatusMessage()
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+
+                <!-- 活动状态 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5>活动状态</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>活动状态:</span>
+                            <span class="badge @GetStatusBadgeClass(activity.Status)">
+                                @GetStatusDisplayName(activity.Status)
+                            </span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>报名状态:</span>
+                            <span class="badge @GetRegistrationBadgeClass()">
+                                @GetRegistrationStatusText()
+                            </span>
+                        </div>
+                        <div class="progress mb-2">
+                            <div class="progress-bar" role="progressbar" 
+                                 style="width: @(GetRegistrationProgress())%"
+                                 aria-valuenow="@GetRegistrationProgress()" 
+                                 aria-valuemin="0" aria-valuemax="100">
+                                @GetRegistrationProgress()%
+                            </div>
+                        </div>
+                        <small class="text-muted">@activity.CurrentParticipants / @activity.MaxParticipants 人已报名</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-danger">
+            <h4>活动不存在</h4>
+            <p>您访问的活动不存在或已被删除。</p>
+            <a href="/activities" class="btn btn-primary">返回活动列表</a>
+        </div>
+    }
+</div>
+
+<!-- 报名模态框 -->
+@if (showRegistrationModal)
+{
+    <div class="modal fade show" style="display: block;" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">报名活动</h5>
+                    <button type="button" class="btn-close" @onclick="CloseRegistrationModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">备注（可选）</label>
+                        <textarea class="form-control" rows="3" @bind="registrationNote" 
+                                  placeholder="请输入报名备注信息..."></textarea>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" @bind="addToScheduleOnRegister" id="modalAddToSchedule">
+                        <label class="form-check-label" for="modalAddToSchedule">
+                            报名后自动添加到日程表
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseRegistrationModal">取消</button>
+                    <button type="button" class="btn btn-primary" @onclick="RegisterForActivity">确认报名</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    
+    private ActivityDto? activity;
+    private bool isLoading = true;
+    private bool showRegistrationModal = false;
+    private string registrationNote = "";
+    private bool addToScheduleOnRegister = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadActivity();
+    }
+
+    private async Task LoadActivity()
+    {
+        isLoading = true;
+        try
+        {
+            activity = await ActivityService.GetActivityByIdAsync(Id);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to load activity: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private bool CanRegister()
+    {
+        if (activity == null) return false;
+        
+        return activity.Status == ActivityStatus.Published &&
+               activity.RegistrationDeadline > DateTime.Now &&
+               activity.CurrentParticipants < activity.MaxParticipants &&
+               !activity.IsRegistered;
+    }
+
+    private void ShowRegistrationModal()
+    {
+        showRegistrationModal = true;
+    }
+
+    private void CloseRegistrationModal()
+    {
+        showRegistrationModal = false;
+        registrationNote = "";
+    }
+
+    private async Task RegisterForActivity()
+    {
+        if (activity == null) return;
+
+        try
+        {
+            var success = await ActivityService.RegisterForActivityAsync(activity.Id, registrationNote);
+            if (success)
+            {
+                CloseRegistrationModal();
+                
+                // 如果选择了自动添加到日程表
+                if (addToScheduleOnRegister)
+                {
+                    await AddToSchedule();
+                }
+                
+                await LoadActivity(); // 重新加载活动信息
+                await JSRuntime.InvokeVoidAsync("alert", "报名成功！");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"报名失败: {ex.Message}");
+        }
+    }
+
+    private async Task CancelRegistration()
+    {
+        if (activity == null) return;
+
+        if (await JSRuntime.InvokeAsync<bool>("confirm", "确定要取消报名吗？"))
+        {
+            try
+            {
+                var success = await ActivityService.CancelRegistrationAsync(activity.Id);
+                if (success)
+                {
+                    await LoadActivity();
+                    await JSRuntime.InvokeVoidAsync("alert", "取消报名成功！");
+                }
+            }
+            catch (Exception ex)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", $"取消报名失败: {ex.Message}");
+            }
+        }
+    }
+
+    private async Task AddToSchedule()
+    {
+        if (activity == null) return;
+
+        try
+        {
+            var success = await ScheduleService.AddActivityToScheduleAsync(activity.Id);
+            if (success)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "已添加到日程表！");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"添加到日程表失败: {ex.Message}");
+        }
+    }
+
+    private string GetStatusBadgeClass(ActivityStatus status)
+    {
+        return status switch
+        {
+            ActivityStatus.Draft => "bg-secondary",
+            ActivityStatus.Published => "bg-success",
+            ActivityStatus.Cancelled => "bg-danger",
+            ActivityStatus.Completed => "bg-info",
+            _ => "bg-secondary"
+        };
+    }
+
+    private string GetStatusDisplayName(ActivityStatus status)
+    {
+        return status switch
+        {
+            ActivityStatus.Draft => "草稿",
+            ActivityStatus.Published => "已发布",
+            ActivityStatus.Cancelled => "已取消",
+            ActivityStatus.Completed => "已完成",
+            _ => "未知"
+        };
+    }
+
+    private string GetRegistrationBadgeClass()
+    {
+        if (activity == null) return "bg-secondary";
+        
+        if (activity.IsRegistered) return "bg-success";
+        if (activity.RegistrationDeadline <= DateTime.Now) return "bg-danger";
+        if (activity.CurrentParticipants >= activity.MaxParticipants) return "bg-warning";
+        return "bg-info";
+    }
+
+    private string GetRegistrationStatusText()
+    {
+        if (activity == null) return "未知";
+        
+        if (activity.IsRegistered) return "已报名";
+        if (activity.RegistrationDeadline <= DateTime.Now) return "已截止";
+        if (activity.CurrentParticipants >= activity.MaxParticipants) return "已满员";
+        return "可报名";
+    }
+
+    private string GetRegistrationStatusMessage()
+    {
+        if (activity == null) return "活动不存在";
+        
+        if (activity.RegistrationDeadline <= DateTime.Now) return "报名已截止";
+        if (activity.CurrentParticipants >= activity.MaxParticipants) return "活动已满员";
+        if (activity.Status != ActivityStatus.Published) return "活动未发布";
+        return "无法报名";
+    }
+
+    private int GetRegistrationProgress()
+    {
+        if (activity == null || activity.MaxParticipants == 0) return 0;
+        return (int)((double)activity.CurrentParticipants / activity.MaxParticipants * 100);
+    }
+} 

@@ -16,6 +16,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<ActivityTag> ActivityTags { get; set; }
     public DbSet<ActivityRecommendation> ActivityRecommendations { get; set; }
     public DbSet<UserActivityPreference> UserActivityPreferences { get; set; }
+    public DbSet<ScheduleItem> ScheduleItems { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -137,6 +138,30 @@ public class ApplicationDbContext : DbContext
                   .OnDelete(DeleteBehavior.Cascade);
                   
             entity.HasIndex(e => new { e.UserId, e.CategoryId }).IsUnique();
+        });
+
+        // 日程表实体配置
+        modelBuilder.Entity<ScheduleItem>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Title).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Description).HasMaxLength(1000);
+            entity.Property(e => e.Location).HasMaxLength(200);
+            entity.Property(e => e.Color).HasMaxLength(7);
+            entity.Property(e => e.Note).HasMaxLength(500);
+            
+            entity.HasOne(e => e.User)
+                  .WithMany()
+                  .HasForeignKey(e => e.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+                  
+            entity.HasOne(e => e.Activity)
+                  .WithMany()
+                  .HasForeignKey(e => e.ActivityId)
+                  .OnDelete(DeleteBehavior.SetNull);
+                  
+            entity.HasIndex(e => new { e.UserId, e.StartTime });
+            entity.HasIndex(e => new { e.UserId, e.Type });
         });
     }
 

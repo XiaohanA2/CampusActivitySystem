@@ -1,28 +1,268 @@
 @page "/api-test"
 @using CampusActivity.Shared.DTOs
+@using CampusActivity.Shared.Enums
 @inject HttpClient Http
 @inject IConfiguration Config
+@inject IAuthService AuthService
 
 <PageTitle>API连接测试</PageTitle>
 
-<h3>API连接测试</h3>
+<div class="container-fluid">
+    <h3>API连接测试</h3>
+    
+    <div class="alert alert-info">
+        <h6>使用说明：</h6>
+        <ul class="mb-0">
+            <li><strong>公开API：</strong>无需登录，测试基础连接和公开接口</li>
+            <li><strong>认证API：</strong>需要先登录，然后测试需要认证的接口</li>
+            <li><strong>默认测试账号：</strong>用户名 admin，密码 admin123</li>
+            <li><strong>测试结果：</strong>绿色表示成功，红色表示失败，黄色表示警告</li>
+        </ul>
+    </div>
 
-<div class="card">
-    <div class="card-body">
-        <h5>配置信息</h5>
-        <p><strong>API基础URL:</strong> @apiBaseUrl</p>
-        <p><strong>当前时间:</strong> @DateTime.Now</p>
-        
-        <button class="btn btn-primary" @onclick="TestApiConnection">测试API连接</button>
-        <button class="btn btn-secondary ms-2" @onclick="TestRecommendations">测试推荐API</button>
-        
-        <div class="mt-3">
-            <h6>测试结果:</h6>
-            <div class="border p-3" style="height: 300px; overflow-y: auto;">
-                @foreach (var log in testLogs)
-                {
-                    <div class="small">@log</div>
-                }
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>配置信息</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>API基础URL:</strong> @apiBaseUrl</p>
+                    <p><strong>当前时间:</strong> @DateTime.Now</p>
+                    <p><strong>认证状态:</strong> @(isAuthenticated ? "已登录" : "未登录")</p>
+                    
+                    @if (!isAuthenticated)
+                    {
+                        <div class="mb-3">
+                            <h6>测试用户登录</h6>
+                            <div class="input-group mb-2">
+                                <input type="text" class="form-control" placeholder="用户名" @bind="testUsername" />
+                                <input type="password" class="form-control" placeholder="密码" @bind="testPassword" />
+                                <button class="btn btn-primary" @onclick="TestLogin">登录</button>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <button class="btn btn-warning" @onclick="Logout">登出</button>
+                    }
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5>批量测试</h5>
+                </div>
+                <div class="card-body">
+                    <button class="btn btn-success w-100 mb-2" @onclick="TestAllApis" disabled="@isTesting">
+                        @if (isTesting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        测试所有API
+                    </button>
+                    <button class="btn btn-info w-100 mb-2" @onclick="TestPublicApis" disabled="@isTesting">
+                        测试公开API
+                    </button>
+                    <button class="btn btn-secondary w-100" @onclick="ClearLogs">清空日志</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5>测试结果</h5>
+                    <span class="badge bg-primary">@testLogs.Count 条记录</span>
+                </div>
+                <div class="card-body">
+                    <div class="border p-3" style="height: 600px; overflow-y: auto; background-color: #f8f9fa;">
+                        @if (testLogs.Count == 0)
+                        {
+                            <div class="text-muted text-center">暂无测试记录</div>
+                        }
+                        else
+                        {
+                            @foreach (var log in testLogs)
+                            {
+                                <div class="small mb-1">
+                                    <span class="text-muted">[@log.Timestamp:HH:mm:ss]</span>
+                                    <span class="@GetLogClass(log.Type)">@log.Message</span>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- API测试按钮区域 -->
+    <div class="row mt-4">
+        <!-- 公开API测试 -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>公开API测试</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-success" @onclick="TestBasicConnection" disabled="@isTesting">
+                            基础连接测试
+                        </button>
+                        <button class="btn btn-outline-success" @onclick="TestHealthCheck" disabled="@isTesting">
+                            健康检查
+                        </button>
+                        <button class="btn btn-outline-success" @onclick="TestDatabaseConnection" disabled="@isTesting">
+                            数据库连接测试
+                        </button>
+                        <button class="btn btn-outline-success" @onclick="TestDatabaseStatus" disabled="@isTesting">
+                            数据库状态检查
+                        </button>
+                        <button class="btn btn-outline-success" @onclick="TestGetActivities" disabled="@isTesting">
+                            获取活动列表
+                        </button>
+                        <button class="btn btn-outline-success" @onclick="TestGetCategories" disabled="@isTesting">
+                            获取活动分类
+                        </button>
+                        <button class="btn btn-outline-success" @onclick="TestGetPopularActivities" disabled="@isTesting">
+                            获取热门活动
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 认证API测试 -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>认证API测试</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-primary" @onclick="TestGetUserProfile" disabled="@(!isAuthenticated || isTesting)">
+                            获取用户资料
+                        </button>
+                        <button class="btn btn-outline-primary" @onclick="TestRegisterApi" disabled="@(!isAuthenticated || isTesting)">
+                            用户注册测试
+                        </button>
+                        <button class="btn btn-outline-primary" @onclick="TestGetMyRegistrations" disabled="@(!isAuthenticated || isTesting)">
+                            获取我的报名活动
+                        </button>
+                        <button class="btn btn-outline-primary" @onclick="TestCreateActivityApi" disabled="@(!isAuthenticated || isTesting)">
+                            创建活动测试
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 日程表API测试 -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>日程表API测试</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <h6>基础操作</h6>
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-outline-info" @onclick="TestCreateScheduleApi" disabled="@(!isAuthenticated || isTesting)">
+                                    创建日程项
+                                </button>
+                                <button class="btn btn-outline-info" @onclick="TestGetScheduleList" disabled="@(!isAuthenticated || isTesting)">
+                                    获取日程列表
+                                </button>
+                                <button class="btn btn-outline-info" @onclick="TestUpdateScheduleApi" disabled="@(!isAuthenticated || isTesting)">
+                                    更新日程项
+                                </button>
+                                <button class="btn btn-outline-info" @onclick="TestDeleteScheduleApi" disabled="@(!isAuthenticated || isTesting)">
+                                    删除日程项
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <h6>状态管理</h6>
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-outline-info" @onclick="TestToggleCompletionApi" disabled="@(!isAuthenticated || isTesting)">
+                                    切换完成状态
+                                </button>
+                                <button class="btn btn-outline-info" @onclick="TestGetUpcomingItems" disabled="@(!isAuthenticated || isTesting)">
+                                    获取即将到来的日程
+                                </button>
+                                <button class="btn btn-outline-info" @onclick="TestGetOverdueItems" disabled="@(!isAuthenticated || isTesting)">
+                                    获取逾期日程
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <h6>视图和统计</h6>
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-outline-info" @onclick="TestCalendarViewApi" disabled="@(!isAuthenticated || isTesting)">
+                                    获取日历视图
+                                </button>
+                                <button class="btn btn-outline-info" @onclick="TestGetScheduleStatistics" disabled="@(!isAuthenticated || isTesting)">
+                                    获取日程统计
+                                </button>
+                                <button class="btn btn-outline-info" @onclick="TestAddActivityToScheduleApi" disabled="@(!isAuthenticated || isTesting)">
+                                    添加活动到日程
+                                </button>
+                                <button class="btn btn-outline-info" @onclick="TestRemoveActivityFromScheduleApi" disabled="@(!isAuthenticated || isTesting)">
+                                    从日程移除活动
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 推荐系统API测试 -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>推荐系统API测试</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-outline-warning" @onclick="TestGetPersonalizedRecommendations" disabled="@(!isAuthenticated || isTesting)">
+                                    个性化推荐
+                                </button>
+                                <button class="btn btn-outline-warning" @onclick="TestGetCollaborativeRecommendations" disabled="@(!isAuthenticated || isTesting)">
+                                    协同过滤推荐
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-outline-warning" @onclick="TestGetContentBasedRecommendations" disabled="@(!isAuthenticated || isTesting)">
+                                    基于内容的推荐
+                                </button>
+                                <button class="btn btn-outline-warning" @onclick="TestGetUserPreferences" disabled="@(!isAuthenticated || isTesting)">
+                                    获取用户偏好
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-outline-warning" @onclick="TestUpdatePreferenceApi" disabled="@(!isAuthenticated || isTesting)">
+                                    更新用户偏好
+                                </button>
+                                <button class="btn btn-outline-warning" @onclick="TestRecalculateRecommendations" disabled="@(!isAuthenticated || isTesting)">
+                                    重新计算推荐
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -30,71 +270,607 @@
 
 @code {
     private string apiBaseUrl = "";
-    private List<string> testLogs = new();
+    private List<TestLog> testLogs = new();
+    private bool isAuthenticated = false;
+    private bool isTesting = false;
+    private string testUsername = "admin";
+    private string testPassword = "admin123";
+    private int? createdScheduleId = null;
+    private int? createdActivityId = null;
 
     [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         apiBaseUrl = Config["ApiSettings:BaseUrl"] ?? "未配置";
-        AddLog($"页面初始化完成，API基础URL: {apiBaseUrl}");
+        isAuthenticated = await AuthService.IsAuthenticatedAsync();
+        AddLog("页面初始化完成", LogType.Info);
+        AddLog($"API基础URL: {apiBaseUrl}", LogType.Info);
+        AddLog($"认证状态: {(isAuthenticated ? "已登录" : "未登录")}", LogType.Info);
     }
 
-    private async Task TestApiConnection()
+    private async Task TestLogin()
     {
-        AddLog("开始测试API连接...");
+        AddLog("开始测试用户登录...", LogType.Info);
         
         try
         {
-            var client = HttpClientFactory.CreateClient("CampusActivityAPI");
-            AddLog($"HTTP客户端基础地址: {client.BaseAddress}");
-            
-            var response = await client.GetAsync("api/test");
-            AddLog($"响应状态码: {response.StatusCode}");
-            
-            var content = await response.Content.ReadAsStringAsync();
-            AddLog($"响应内容: {content.Substring(0, Math.Min(content.Length, 200))}...");
-        }
-        catch (Exception ex)
-        {
-            AddLog($"API连接测试失败: {ex.Message}");
-            AddLog($"异常类型: {ex.GetType().Name}");
-        }
-    }
-
-    private async Task TestRecommendations()
-    {
-        AddLog("开始测试推荐API...");
-        
-        try
-        {
-            var client = HttpClientFactory.CreateClient("CampusActivityAPI");
-            AddLog($"HTTP客户端基础地址: {client.BaseAddress}");
-            
-            var response = await client.GetAsync("api/recommendations?count=5");
-            AddLog($"推荐API响应状态码: {response.StatusCode}");
-            
-            var content = await response.Content.ReadAsStringAsync();
-            AddLog($"推荐API响应内容类型: {response.Content.Headers.ContentType}");
-            AddLog($"推荐API响应内容长度: {content.Length}");
-            AddLog($"推荐API响应内容前200字符: {content.Substring(0, Math.Min(content.Length, 200))}");
-            
-            if (content.StartsWith("<"))
+            var loginDto = new LoginDto
             {
-                AddLog("⚠️ 检测到HTML响应，这可能是问题所在！");
+                Username = testUsername,
+                Password = testPassword
+            };
+            
+            var result = await AuthService.LoginAsync(loginDto);
+            if (result != null)
+            {
+                isAuthenticated = true;
+                AddLog($"登录成功！用户: {result.User.FullName} ({result.User.Role})", LogType.Success);
+            }
+            else
+            {
+                AddLog("登录失败：用户名或密码错误", LogType.Error);
             }
         }
         catch (Exception ex)
         {
-            AddLog($"推荐API测试失败: {ex.Message}");
-            AddLog($"异常类型: {ex.GetType().Name}");
-            AddLog($"异常详情: {ex}");
+            AddLog($"登录测试失败: {ex.Message}", LogType.Error);
         }
     }
 
-    private void AddLog(string message)
+    private async Task Logout()
     {
-        testLogs.Insert(0, $"[{DateTime.Now:HH:mm:ss}] {message}");
+        await AuthService.LogoutAsync();
+        isAuthenticated = false;
+        AddLog("已登出", LogType.Info);
+    }
+
+    private async Task TestAllApis()
+    {
+        isTesting = true;
+        AddLog("开始测试所有API...", LogType.Info);
+        
+        try
+        {
+            // 测试公开API
+            await TestPublicApis();
+            
+            // 如果未登录，先尝试登录
+            if (!isAuthenticated)
+            {
+                await TestLogin();
+            }
+            
+            if (isAuthenticated)
+            {
+                // 测试需要认证的API
+                await TestAuthApis();
+                await TestActivityApis();
+                await TestScheduleApis();
+                await TestRecommendationApis();
+            }
+            else
+            {
+                AddLog("无法测试需要认证的API：未登录", LogType.Warning);
+            }
+        }
+        finally
+        {
+            isTesting = false;
+            AddLog("所有API测试完成", LogType.Info);
+        }
+    }
+
+    private async Task TestPublicApis()
+    {
+        AddLog("=== 测试公开API ===", LogType.Info);
+        
+        var client = HttpClientFactory.CreateClient("CampusActivityAPI");
+        
+        // 测试基础连接
+        await TestApiEndpoint(client, "GET", "api/test", "基础连接测试");
+        await TestApiEndpoint(client, "GET", "api/test/health", "健康检查");
+        
+        // 测试数据库连接
+        await TestApiEndpoint(client, "GET", "api/test/database", "数据库连接测试");
+        await TestApiEndpoint(client, "GET", "api/test/status", "数据库状态检查");
+        await TestApiEndpoint(client, "GET", "api/test/categories", "数据库分类查询测试");
+        await TestApiEndpoint(client, "GET", "api/test/activities", "数据库活动查询测试");
+        
+        // 测试活动相关公开API
+        await TestApiEndpoint(client, "GET", "api/activities?pageIndex=1&pageSize=5", "获取活动列表");
+        await TestApiEndpoint(client, "GET", "api/activities/categories", "获取活动分类");
+        await TestApiEndpoint(client, "GET", "api/activities/popular?count=5", "获取热门活动");
+    }
+
+    private async Task TestAuthApis()
+    {
+        AddLog("=== 测试认证API ===", LogType.Info);
+        
+        var client = HttpClientFactory.CreateClient("CampusActivityAPI");
+        await SetAuthHeader(client);
+        
+        await TestApiEndpoint(client, "GET", "api/auth/profile", "获取用户资料");
+        
+        // 测试注册（可能会失败，因为用户可能已存在）
+        var registerDto = new RegisterDto
+        {
+            Username = $"testuser_{DateTime.Now.Ticks}",
+            Password = "test123",
+            Email = $"test{DateTime.Now.Ticks}@test.com",
+            FullName = "测试用户",
+            Role = UserRole.Student
+        };
+        await TestApiEndpoint(client, "POST", "api/auth/register", "用户注册", registerDto);
+    }
+
+    private async Task TestActivityApis()
+    {
+        AddLog("=== 测试活动管理API ===", LogType.Info);
+        
+        var client = HttpClientFactory.CreateClient("CampusActivityAPI");
+        await SetAuthHeader(client);
+        
+        // 获取活动列表
+        await TestApiEndpoint(client, "GET", "api/activities?pageIndex=1&pageSize=5", "获取活动列表（认证）");
+        
+        // 获取我的报名活动
+        await TestApiEndpoint(client, "GET", "api/activities/my-registrations", "获取我的报名活动");
+        
+        // 测试创建活动（需要教师或管理员权限）
+        var createActivityDto = new CreateActivityDto
+        {
+            Title = $"测试活动 {DateTime.Now:yyyy-MM-dd HH:mm}",
+            Description = "这是一个测试活动",
+            StartTime = DateTime.Now.AddDays(1),
+            EndTime = DateTime.Now.AddDays(1).AddHours(2),
+            RegistrationDeadline = DateTime.Now.AddHours(12),
+            Location = "测试地点",
+            MaxParticipants = 50,
+            CategoryId = 1
+        };
+        await TestApiEndpoint(client, "POST", "api/activities", "创建活动", createActivityDto);
+    }
+
+    private async Task TestScheduleApis()
+    {
+        AddLog("=== 测试日程表API ===", LogType.Info);
+        
+        var client = HttpClientFactory.CreateClient("CampusActivityAPI");
+        await SetAuthHeader(client);
+        
+        // 创建日程项
+        var createScheduleDto = new CreateScheduleItemDto
+        {
+            Title = $"测试日程 {DateTime.Now:yyyy-MM-dd HH:mm}",
+            Description = "这是一个测试日程项",
+            StartTime = DateTime.Now.AddDays(1),
+            EndTime = DateTime.Now.AddDays(1).AddHours(1),
+            Type = ScheduleItemType.Personal,
+            Priority = ScheduleItemPriority.Medium,
+            Location = "测试地点"
+        };
+        await TestApiEndpoint(client, "POST", "api/schedule", "创建日程项", createScheduleDto);
+        
+        // 获取日程列表
+        await TestApiEndpoint(client, "GET", "api/schedule?pageIndex=1&pageSize=5", "获取日程列表");
+        
+        // 获取即将到来的日程
+        await TestApiEndpoint(client, "GET", "api/schedule/upcoming?count=5", "获取即将到来的日程");
+        
+        // 获取逾期日程
+        await TestApiEndpoint(client, "GET", "api/schedule/overdue", "获取逾期日程");
+        
+        // 获取日历视图
+        var startDate = DateTime.Now.Date;
+        var endDate = startDate.AddDays(7);
+        await TestApiEndpoint(client, "GET", $"api/schedule/calendar?startDate={startDate:yyyy-MM-dd}&endDate={endDate:yyyy-MM-dd}", "获取日历视图");
+        
+        // 获取日程统计
+        await TestApiEndpoint(client, "GET", "api/schedule/statistics", "获取日程统计");
+    }
+
+    private async Task TestRecommendationApis()
+    {
+        AddLog("=== 测试推荐系统API ===", LogType.Info);
+        
+        var client = HttpClientFactory.CreateClient("CampusActivityAPI");
+        await SetAuthHeader(client);
+        
+        await TestApiEndpoint(client, "GET", "api/recommendations?count=5", "获取个性化推荐");
+        await TestApiEndpoint(client, "GET", "api/recommendations/collaborative?count=5", "获取协同过滤推荐");
+        await TestApiEndpoint(client, "GET", "api/recommendations/content-based?count=5", "获取基于内容的推荐");
+        await TestApiEndpoint(client, "GET", "api/recommendations/preferences", "获取用户偏好");
+        
+        // 测试更新用户偏好
+        var updatePreferenceDto = new { CategoryId = 1, Weight = 0.8 };
+        await TestApiEndpoint(client, "POST", "api/recommendations/preferences", "更新用户偏好", updatePreferenceDto);
+        
+        await TestApiEndpoint(client, "POST", "api/recommendations/recalculate", "重新计算推荐");
+    }
+
+    // 单个API测试方法
+    private async Task TestSingleApi(string method, string endpoint, string description, object? data = null)
+    {
+        isTesting = true;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("CampusActivityAPI");
+            
+            // 如果是需要认证的API，设置认证头
+            if (endpoint.StartsWith("api/auth/") || endpoint.StartsWith("api/activities/") || 
+                endpoint.StartsWith("api/schedule/") || endpoint.StartsWith("api/recommendations/"))
+            {
+                await SetAuthHeader(client);
+            }
+            
+            await TestApiEndpoint(client, method, endpoint, description, data);
+        }
+        finally
+        {
+            isTesting = false;
+        }
+    }
+
+    // 日程表相关测试方法
+    private async Task TestCreateScheduleApi()
+    {
+        var createScheduleDto = new CreateScheduleItemDto
+        {
+            Title = $"测试日程 {DateTime.Now:yyyy-MM-dd HH:mm}",
+            Description = "这是一个测试日程项",
+            StartTime = DateTime.Now.AddDays(1),
+            EndTime = DateTime.Now.AddDays(1).AddHours(1),
+            Type = ScheduleItemType.Personal,
+            Priority = ScheduleItemPriority.Medium,
+            Location = "测试地点"
+        };
+        await TestSingleApi("POST", "api/schedule", "创建日程项", createScheduleDto);
+    }
+
+    private async Task TestUpdateScheduleApi()
+    {
+        if (createdScheduleId.HasValue)
+        {
+            var updateScheduleDto = new UpdateScheduleItemDto
+            {
+                Id = createdScheduleId.Value,
+                Title = $"更新后的日程 {DateTime.Now:yyyy-MM-dd HH:mm}",
+                Description = "这是更新后的日程项",
+                StartTime = DateTime.Now.AddDays(2),
+                EndTime = DateTime.Now.AddDays(2).AddHours(1),
+                Type = ScheduleItemType.Personal,
+                Priority = ScheduleItemPriority.High,
+                Location = "更新后的地点",
+                IsCompleted = false
+            };
+            await TestSingleApi("PUT", $"api/schedule/{createdScheduleId.Value}", "更新日程项", updateScheduleDto);
+        }
+        else
+        {
+            AddLog("请先创建日程项再进行更新测试", LogType.Warning);
+        }
+    }
+
+    private async Task TestDeleteScheduleApi()
+    {
+        if (createdScheduleId.HasValue)
+        {
+            await TestSingleApi("DELETE", $"api/schedule/{createdScheduleId.Value}", "删除日程项");
+            createdScheduleId = null;
+        }
+        else
+        {
+            AddLog("请先创建日程项再进行删除测试", LogType.Warning);
+        }
+    }
+
+    private async Task TestToggleCompletionApi()
+    {
+        if (createdScheduleId.HasValue)
+        {
+            await TestSingleApi("POST", $"api/schedule/{createdScheduleId.Value}/toggle-completion", "切换完成状态");
+        }
+        else
+        {
+            AddLog("请先创建日程项再进行状态切换测试", LogType.Warning);
+        }
+    }
+
+    private async Task TestCalendarViewApi()
+    {
+        var startDate = DateTime.Now.Date;
+        var endDate = startDate.AddDays(7);
+        await TestSingleApi("GET", $"api/schedule/calendar?startDate={startDate:yyyy-MM-dd}&endDate={endDate:yyyy-MM-dd}", "获取日历视图");
+    }
+
+    private async Task TestAddActivityToScheduleApi()
+    {
+        if (createdActivityId.HasValue)
+        {
+            await TestSingleApi("POST", $"api/schedule/activities/{createdActivityId.Value}", "添加活动到日程");
+        }
+        else
+        {
+            AddLog("请先创建活动再进行添加活动到日程测试", LogType.Warning);
+        }
+    }
+
+    private async Task TestRemoveActivityFromScheduleApi()
+    {
+        if (createdActivityId.HasValue)
+        {
+            await TestSingleApi("DELETE", $"api/schedule/activities/{createdActivityId.Value}", "从日程移除活动");
+        }
+        else
+        {
+            AddLog("请先创建活动再进行从日程移除活动测试", LogType.Warning);
+        }
+    }
+
+    // 活动相关测试方法
+    private async Task TestCreateActivityApi()
+    {
+        var createActivityDto = new CreateActivityDto
+        {
+            Title = $"测试活动 {DateTime.Now:yyyy-MM-dd HH:mm}",
+            Description = "这是一个测试活动",
+            StartTime = DateTime.Now.AddDays(1),
+            EndTime = DateTime.Now.AddDays(1).AddHours(2),
+            RegistrationDeadline = DateTime.Now.AddHours(12),
+            Location = "测试地点",
+            MaxParticipants = 50,
+            CategoryId = 1
+        };
+        await TestSingleApi("POST", "api/activities", "创建活动", createActivityDto);
+    }
+
+    // 认证相关测试方法
+    private async Task TestRegisterApi()
+    {
+        var registerDto = new RegisterDto
+        {
+            Username = $"testuser_{DateTime.Now.Ticks}",
+            Password = "test123",
+            Email = $"test{DateTime.Now.Ticks}@test.com",
+            FullName = "测试用户",
+            Role = UserRole.Student
+        };
+        await TestSingleApi("POST", "api/auth/register", "用户注册", registerDto);
+    }
+
+    // 推荐系统相关测试方法
+    private async Task TestUpdatePreferenceApi()
+    {
+        var updatePreferenceDto = new { CategoryId = 1, Weight = 0.8 };
+        await TestSingleApi("POST", "api/recommendations/preferences", "更新用户偏好", updatePreferenceDto);
+    }
+
+    // 公开API测试方法
+    private async Task TestBasicConnection()
+    {
+        await TestSingleApi("GET", "api/test", "基础连接测试");
+    }
+
+    private async Task TestHealthCheck()
+    {
+        await TestSingleApi("GET", "api/test/health", "健康检查");
+    }
+
+    private async Task TestDatabaseConnection()
+    {
+        await TestSingleApi("GET", "api/test/database", "数据库连接测试");
+    }
+
+    private async Task TestDatabaseStatus()
+    {
+        await TestSingleApi("GET", "api/test/status", "数据库状态检查");
+    }
+
+    private async Task TestGetActivities()
+    {
+        await TestSingleApi("GET", "api/activities?pageIndex=1&pageSize=5", "获取活动列表");
+    }
+
+    private async Task TestGetCategories()
+    {
+        await TestSingleApi("GET", "api/activities/categories", "获取活动分类");
+    }
+
+    private async Task TestGetPopularActivities()
+    {
+        await TestSingleApi("GET", "api/activities/popular?count=5", "获取热门活动");
+    }
+
+    // 认证API测试方法
+    private async Task TestGetUserProfile()
+    {
+        await TestSingleApi("GET", "api/auth/profile", "获取用户资料");
+    }
+
+    private async Task TestGetMyRegistrations()
+    {
+        await TestSingleApi("GET", "api/activities/my-registrations", "获取我的报名活动");
+    }
+
+    // 日程表API测试方法
+    private async Task TestGetScheduleList()
+    {
+        await TestSingleApi("GET", "api/schedule?pageIndex=1&pageSize=5", "获取日程列表");
+    }
+
+    private async Task TestGetUpcomingItems()
+    {
+        await TestSingleApi("GET", "api/schedule/upcoming?count=5", "获取即将到来的日程");
+    }
+
+    private async Task TestGetOverdueItems()
+    {
+        await TestSingleApi("GET", "api/schedule/overdue", "获取逾期日程");
+    }
+
+    private async Task TestGetScheduleStatistics()
+    {
+        await TestSingleApi("GET", "api/schedule/statistics", "获取日程统计");
+    }
+
+    // 推荐系统API测试方法
+    private async Task TestGetPersonalizedRecommendations()
+    {
+        await TestSingleApi("GET", "api/recommendations?count=5", "获取个性化推荐");
+    }
+
+    private async Task TestGetCollaborativeRecommendations()
+    {
+        await TestSingleApi("GET", "api/recommendations/collaborative?count=5", "获取协同过滤推荐");
+    }
+
+    private async Task TestGetContentBasedRecommendations()
+    {
+        await TestSingleApi("GET", "api/recommendations/content-based?count=5", "获取基于内容的推荐");
+    }
+
+    private async Task TestGetUserPreferences()
+    {
+        await TestSingleApi("GET", "api/recommendations/preferences", "获取用户偏好");
+    }
+
+    private async Task TestRecalculateRecommendations()
+    {
+        await TestSingleApi("POST", "api/recommendations/recalculate", "重新计算推荐");
+    }
+
+    private async Task TestApiEndpoint(HttpClient client, string method, string endpoint, string description, object? data = null)
+    {
+        try
+        {
+            AddLog($"测试 {method} {endpoint} - {description}", LogType.Info);
+            
+            HttpResponseMessage response;
+            string requestBody = "";
+            
+            if (data != null)
+            {
+                var json = System.Text.Json.JsonSerializer.Serialize(data);
+                requestBody = json;
+                var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+                
+                response = method.ToUpper() switch
+                {
+                    "POST" => await client.PostAsync(endpoint, content),
+                    "PUT" => await client.PutAsync(endpoint, content),
+                    "DELETE" => await client.DeleteAsync(endpoint),
+                    _ => await client.GetAsync(endpoint)
+                };
+            }
+            else
+            {
+                response = method.ToUpper() switch
+                {
+                    "GET" => await client.GetAsync(endpoint),
+                    "DELETE" => await client.DeleteAsync(endpoint),
+                    _ => await client.GetAsync(endpoint)
+                };
+            }
+            
+            var responseContent = await response.Content.ReadAsStringAsync();
+            var statusCode = response.StatusCode;
+            
+            if (response.IsSuccessStatusCode)
+            {
+                AddLog($"✅ {description} 成功 ({(int)statusCode})", LogType.Success);
+                
+                // 如果是创建操作，尝试获取创建的ID
+                if (method.ToUpper() == "POST" && endpoint.Contains("schedule") && !string.IsNullOrEmpty(responseContent))
+                {
+                    try
+                    {
+                        var result = System.Text.Json.JsonSerializer.Deserialize<ScheduleItemDto>(responseContent);
+                        if (result != null)
+                        {
+                            createdScheduleId = result.Id;
+                            AddLog($"创建的日程项ID: {createdScheduleId}", LogType.Info);
+                        }
+                    }
+                    catch { }
+                }
+                
+                if (!string.IsNullOrEmpty(responseContent) && responseContent.Length < 200)
+                {
+                    AddLog($"响应: {responseContent}", LogType.Info);
+                }
+            }
+            else
+            {
+                AddLog($"❌ {description} 失败 ({(int)statusCode}): {responseContent}", LogType.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            AddLog($"❌ {description} 异常: {ex.Message}", LogType.Error);
+        }
+    }
+
+    private async Task SetAuthHeader(HttpClient client)
+    {
+        try
+        {
+            var token = await AuthService.GetTokenAsync();
+            if (!string.IsNullOrEmpty(token))
+            {
+                client.DefaultRequestHeaders.Authorization = 
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                AddLog("认证头设置成功", LogType.Success);
+            }
+            else
+            {
+                AddLog("未找到认证token", LogType.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            AddLog($"设置认证头失败: {ex.Message}", LogType.Warning);
+        }
+    }
+
+    private void ClearLogs()
+    {
+        testLogs.Clear();
         StateHasChanged();
+    }
+
+    private void AddLog(string message, LogType type = LogType.Info)
+    {
+        testLogs.Insert(0, new TestLog
+        {
+            Message = message,
+            Type = type,
+            Timestamp = DateTime.Now
+        });
+        StateHasChanged();
+    }
+
+    private string GetLogClass(LogType type) => type switch
+    {
+        LogType.Success => "text-success fw-bold",
+        LogType.Error => "text-danger fw-bold",
+        LogType.Warning => "text-warning fw-bold",
+        LogType.Info => "text-dark",
+        _ => "text-dark"
+    };
+
+    public class TestLog
+    {
+        public string Message { get; set; } = "";
+        public LogType Type { get; set; }
+        public DateTime Timestamp { get; set; }
+    }
+
+    public enum LogType
+    {
+        Info,
+        Success,
+        Warning,
+        Error
     }
 } 

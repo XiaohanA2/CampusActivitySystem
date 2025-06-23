@@ -1,0 +1,121 @@
+@page "/register"
+@using CampusActivity.Shared.DTOs
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>用户注册</PageTitle>
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">用户注册</h4>
+            </div>
+            <div class="card-body">
+                <EditForm Model="registerModel" OnValidSubmit="HandleRegister">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="mb-3">
+                        <label class="form-label">用户名</label>
+                        <InputText class="form-control" @bind-Value="registerModel.Username" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">密码</label>
+                        <InputText class="form-control" @bind-Value="registerModel.Password" type="password" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">确认密码</label>
+                        <InputText class="form-control" @bind-Value="confirmPassword" type="password" />
+                        @if (!string.IsNullOrEmpty(passwordError))
+                        {
+                            <div class="text-danger small">@passwordError</div>
+                        }
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">邮箱</label>
+                        <InputText class="form-control" @bind-Value="registerModel.Email" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">姓名</label>
+                        <InputText class="form-control" @bind-Value="registerModel.FullName" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">角色</label>
+                        <InputSelect class="form-select" @bind-Value="registerModel.Role">
+                            <option value="@UserRole.Student">学生</option>
+                            <option value="@UserRole.Teacher">教师</option>
+                        </InputSelect>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary" disabled="@isLoading">
+                            @if (isLoading)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            }
+                            注册
+                        </button>
+                    </div>
+                </EditForm>
+                <div class="text-center mt-3">
+                    <p>已有账号？ <a href="/login">立即登录</a></p>
+                </div>
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger mt-3">@errorMessage</div>
+                }
+                @if (!string.IsNullOrEmpty(successMessage))
+                {
+                    <div class="alert alert-success mt-3">@successMessage</div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private RegisterDto registerModel = new();
+    private string confirmPassword = string.Empty;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+    private string passwordError = string.Empty;
+    private bool isLoading = false;
+
+    private async Task HandleRegister()
+    {
+        errorMessage = string.Empty;
+        successMessage = string.Empty;
+        passwordError = string.Empty;
+
+        if (registerModel.Password != confirmPassword)
+        {
+            passwordError = "两次输入的密码不一致";
+            return;
+        }
+
+        isLoading = true;
+        try
+        {
+            var result = await AuthService.RegisterAsync(registerModel);
+            if (result != null)
+            {
+                successMessage = "注册成功，正在跳转到登录页...";
+                await Task.Delay(1500);
+                Navigation.NavigateTo("/login");
+            }
+            else
+            {
+                errorMessage = "注册失败，用户名或邮箱可能已存在。";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"注册失败: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+} 

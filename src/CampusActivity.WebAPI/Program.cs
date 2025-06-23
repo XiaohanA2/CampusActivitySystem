@@ -58,11 +58,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
         ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("DefaultConnection"))
     ));
 
-// 配置Redis缓存
-builder.Services.AddStackExchangeRedisCache(options =>
-{
-    options.Configuration = builder.Configuration.GetConnectionString("Redis");
-});
+// 配置缓存（使用内存缓存）
+builder.Services.AddDistributedMemoryCache();
 
 // 配置JWT认证
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
@@ -110,6 +107,7 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IActivityService, ActivityService>();
 builder.Services.AddScoped<IRecommendationService, RecommendationService>();
+builder.Services.AddScoped<IScheduleService, ScheduleService>();
 
 // 配置CORS
 builder.Services.AddCors(options =>
@@ -209,5 +207,118 @@ static async Task SeedData(ApplicationDbContext context)
         
         context.Users.Add(adminUser);
         await context.SaveChangesAsync();
+    }
+
+    // 添加示例活动数据
+    if (!context.Activities.Any())
+    {
+        var categories = context.ActivityCategories.ToList();
+        var adminUser = context.Users.FirstOrDefault(u => u.Role == CampusActivity.Shared.DTOs.UserRole.Admin);
+        
+        if (categories.Any() && adminUser != null)
+        {
+            var activities = new[]
+            {
+                new CampusActivity.Domain.Entities.Activity
+                {
+                    Title = "人工智能技术讲座",
+                    Description = "探讨AI技术的最新发展和应用前景，邀请业内专家分享经验。",
+                    Location = "学术报告厅A101",
+                    StartTime = DateTime.UtcNow.AddDays(7),
+                    EndTime = DateTime.UtcNow.AddDays(7).AddHours(2),
+                    RegistrationDeadline = DateTime.UtcNow.AddDays(5),
+                    MaxParticipants = 100,
+                    CurrentParticipants = 0,
+                    Status = CampusActivity.Shared.DTOs.ActivityStatus.Published,
+                    CategoryId = categories.First(c => c.Name == "学术讲座").Id,
+                    CreatedBy = adminUser.Id,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                },
+                new CampusActivity.Domain.Entities.Activity
+                {
+                    Title = "校园歌手大赛",
+                    Description = "一年一度的校园歌手大赛，展示你的音乐才华！",
+                    Location = "学生活动中心",
+                    StartTime = DateTime.UtcNow.AddDays(14),
+                    EndTime = DateTime.UtcNow.AddDays(14).AddHours(3),
+                    RegistrationDeadline = DateTime.UtcNow.AddDays(10),
+                    MaxParticipants = 50,
+                    CurrentParticipants = 0,
+                    Status = CampusActivity.Shared.DTOs.ActivityStatus.Published,
+                    CategoryId = categories.First(c => c.Name == "文艺演出").Id,
+                    CreatedBy = adminUser.Id,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                },
+                new CampusActivity.Domain.Entities.Activity
+                {
+                    Title = "篮球友谊赛",
+                    Description = "院系间篮球友谊赛，增进同学间的友谊。",
+                    Location = "体育馆",
+                    StartTime = DateTime.UtcNow.AddDays(3),
+                    EndTime = DateTime.UtcNow.AddDays(3).AddHours(2),
+                    RegistrationDeadline = DateTime.UtcNow.AddDays(1),
+                    MaxParticipants = 20,
+                    CurrentParticipants = 0,
+                    Status = CampusActivity.Shared.DTOs.ActivityStatus.Published,
+                    CategoryId = categories.First(c => c.Name == "体育竞技").Id,
+                    CreatedBy = adminUser.Id,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                },
+                new CampusActivity.Domain.Entities.Activity
+                {
+                    Title = "社区志愿服务",
+                    Description = "走进社区，为老人提供志愿服务，传递爱心。",
+                    Location = "幸福社区",
+                    StartTime = DateTime.UtcNow.AddDays(5),
+                    EndTime = DateTime.UtcNow.AddDays(5).AddHours(4),
+                    RegistrationDeadline = DateTime.UtcNow.AddDays(3),
+                    MaxParticipants = 30,
+                    CurrentParticipants = 0,
+                    Status = CampusActivity.Shared.DTOs.ActivityStatus.Published,
+                    CategoryId = categories.First(c => c.Name == "社会实践").Id,
+                    CreatedBy = adminUser.Id,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                },
+                new CampusActivity.Domain.Entities.Activity
+                {
+                    Title = "创新创业大赛",
+                    Description = "展示你的创新项目，获得投资机会和创业指导。",
+                    Location = "创业孵化中心",
+                    StartTime = DateTime.UtcNow.AddDays(21),
+                    EndTime = DateTime.UtcNow.AddDays(21).AddHours(6),
+                    RegistrationDeadline = DateTime.UtcNow.AddDays(15),
+                    MaxParticipants = 40,
+                    CurrentParticipants = 0,
+                    Status = CampusActivity.Shared.DTOs.ActivityStatus.Published,
+                    CategoryId = categories.First(c => c.Name == "创新创业").Id,
+                    CreatedBy = adminUser.Id,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                },
+                new CampusActivity.Domain.Entities.Activity
+                {
+                    Title = "企业参观活动",
+                    Description = "参观知名企业，了解企业文化和工作环境。",
+                    Location = "科技园区",
+                    StartTime = DateTime.UtcNow.AddDays(10),
+                    EndTime = DateTime.UtcNow.AddDays(10).AddHours(3),
+                    RegistrationDeadline = DateTime.UtcNow.AddDays(7),
+                    MaxParticipants = 25,
+                    CurrentParticipants = 0,
+                    Status = CampusActivity.Shared.DTOs.ActivityStatus.Published,
+                    CategoryId = categories.First(c => c.Name == "交流参观").Id,
+                    CreatedBy = adminUser.Id,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                }
+            };
+            
+            context.Activities.AddRange(activities);
+            await context.SaveChangesAsync();
+        }
     }
 }

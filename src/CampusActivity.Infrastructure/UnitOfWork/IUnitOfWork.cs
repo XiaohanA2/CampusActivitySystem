@@ -12,6 +12,7 @@ public interface IUnitOfWork : IDisposable
     IRepository<ActivityTag> ActivityTags { get; }
     IRepository<ActivityRecommendation> ActivityRecommendations { get; }
     IRepository<UserActivityPreference> UserActivityPreferences { get; }
+    IRepository<ScheduleItem> ScheduleItems { get; }
     
     Task<int> SaveChangesAsync();
     Task BeginTransactionAsync();

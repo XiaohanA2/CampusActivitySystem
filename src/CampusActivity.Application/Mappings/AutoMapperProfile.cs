@@ -55,5 +55,22 @@ public class AutoMapperProfile : Profile
             .ForMember(dest => dest.Id, opt => opt.Ignore())
             .ForMember(dest => dest.ActivityId, opt => opt.Ignore())
             .ForMember(dest => dest.Color, opt => opt.Ignore());
+
+        // 日程表映射
+        CreateMap<ScheduleItem, ScheduleItemDto>()
+            .ForMember(dest => dest.ActivityTitle, opt => opt.Ignore())
+            .ForMember(dest => dest.ActivityLocation, opt => opt.Ignore());
+
+        CreateMap<CreateScheduleItemDto, ScheduleItem>()
+            .ForMember(dest => dest.Id, opt => opt.Ignore())
+            .ForMember(dest => dest.UserId, opt => opt.Ignore())
+            .ForMember(dest => dest.IsCompleted, opt => opt.MapFrom(src => false))
+            .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.UtcNow))
+            .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => DateTime.UtcNow));
+
+        CreateMap<UpdateScheduleItemDto, ScheduleItem>()
+            .ForMember(dest => dest.UserId, opt => opt.Ignore())
+            .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => DateTime.UtcNow));
     }
 } 

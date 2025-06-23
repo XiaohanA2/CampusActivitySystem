@@ -1,0 +1,57 @@
+{
+  "version": 2,
+  "dgSpecHash": "8py5MZDtWBA=",
+  "success": true,
+  "projectFilePath": "D:\\Github\\CampusActivitySystem\\src\\CampusActivity.BlazorWeb\\CampusActivity.BlazorWeb.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\杨宇琨\\.nuget\\packages\\blazored.localstorage\\4.4.0\\blazored.localstorage.4.4.0.nupkg.sha512",
+    "C:\\Users\\杨宇琨\\.nuget\\packages\\microsoft.aspnetcore.authorization\\8.0.0\\microsoft.aspnetcore.authorization.8.0.0.nupkg.sha512",
+    "C:\\Users\\杨宇琨\\.nuget\\packages\\microsoft.aspnetcore.components\\8.0.0\\microsoft.aspnetcore.components.8.0.0.nupkg.sha512",
+    "C:\\Users\\杨宇琨\\.nuget\\packages\\microsoft.aspnetcore.components.analyzers\\8.0.0\\microsoft.aspnetcore.components.analyzers.8.0.0.nupkg.sha512",
+    "C:\\Users\\杨宇琨\\.nuget\\packages\\microsoft.aspnetcore.components.authorization\\8.0.0\\microsoft.aspnetcore.components.authorization.8.0.0.nupkg.sha512",
+    "C:\\Users\\杨宇琨\\.nuget\\packages\\microsoft.aspnetcore.components.forms\\7.0.14\\microsoft.aspnetcore.components.forms.7.0.14.nupkg.sha512",
+    "C:\\Users\\杨宇琨\\.nuget\\packages\\microsoft.aspnetcore.components.web\\7.0.14\\microsoft.aspnetcore.components.web.7.0.14.nupkg.sha512",
+    "C:\\Users\\杨宇琨\\.nuget\\packages\\microsoft.aspnetcore.metadata\\8.0.0\\microsoft.aspnetcore.metadata.8.0.0.nupkg.sha512",
+    "C:\\Users\\杨宇琨\\.nuget\\packages\\microsoft.bcl.timeprovider\\8.0.1\\microsoft.bcl.timeprovider.8.0.1.nupkg.sha512",
+    "C:\\Users\\杨宇琨\\.nuget\\packages\\microsoft.extensions.configuration\\8.0.0\\microsoft.extensions.configuration.8.0.0.nupkg.sha512",
+    "C:\\Users\\杨宇琨\\.nuget\\packages\\microsoft.extensions.configuration.abstractions\\8.0.0\\microsoft.extensions.configuration.abstractions.8.0.0.nupkg.sha512",
+    "C:\\Users\\杨宇琨\\.nuget\\packages\\microsoft.extensions.configuration.binder\\8.0.0\\microsoft.extensions.configuration.binder.8.0.0.nupkg.sha512",
+    "C:\\Users\\杨宇琨\\.nuget\\packages\\microsoft.extensions.dependencyinjection\\8.0.0\\microsoft.extensions.dependencyinjection.8.0.0.nupkg.sha512",
+    "C:\\Users\\杨宇琨\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\8.0.0\\microsoft.extensions.dependencyinjection.abstractions.8.0.0.nupkg.sha512",
+    "C:\\Users\\杨宇琨\\.nuget\\packages\\microsoft.extensions.diagnostics\\8.0.0\\microsoft.extensions.diagnostics.8.0.0.nupkg.sha512",
+    "C:\\Users\\杨宇琨\\.nuget\\packages\\microsoft.extensions.diagnostics.abstractions\\8.0.0\\microsoft.extensions.diagnostics.abstractions.8.0.0.nupkg.sha512",
+    "C:\\Users\\杨宇琨\\.nuget\\packages\\microsoft.extensions.http\\8.0.0\\microsoft.extensions.http.8.0.0.nupkg.sha512",
+    "C:\\Users\\杨宇琨\\.nuget\\packages\\microsoft.extensions.localization\\7.0.14\\microsoft.extensions.localization.7.0.14.nupkg.sha512",
+    "C:\\Users\\杨宇琨\\.nuget\\packages\\microsoft.extensions.localization.abstractions\\7.0.14\\microsoft.extensions.localization.abstractions.7.0.14.nupkg.sha512",
+    "C:\\Users\\杨宇琨\\.nuget\\packages\\microsoft.extensions.logging\\8.0.0\\microsoft.extensions.logging.8.0.0.nupkg.sha512",
+    "C:\\Users\\杨宇琨\\.nuget\\packages\\microsoft.extensions.logging.abstractions\\8.0.0\\microsoft.extensions.logging.abstractions.8.0.0.nupkg.sha512",
+    "C:\\Users\\杨宇琨\\.nuget\\packages\\microsoft.extensions.options\\8.0.0\\microsoft.extensions.options.8.0.0.nupkg.sha512",
+    "C:\\Users\\杨宇琨\\.nuget\\packages\\microsoft.extensions.options.configurationextensions\\8.0.0\\microsoft.extensions.options.configurationextensions.8.0.0.nupkg.sha512",
+    "C:\\Users\\杨宇琨\\.nuget\\packages\\microsoft.extensions.primitives\\8.0.0\\microsoft.extensions.primitives.8.0.0.nupkg.sha512",
+    "C:\\Users\\杨宇琨\\.nuget\\packages\\microsoft.identitymodel.abstractions\\8.1.0\\microsoft.identitymodel.abstractions.8.1.0.nupkg.sha512",
+    "C:\\Users\\杨宇琨\\.nuget\\packages\\microsoft.identitymodel.jsonwebtokens\\8.1.0\\microsoft.identitymodel.jsonwebtokens.8.1.0.nupkg.sha512",
+    "C:\\Users\\杨宇琨\\.nuget\\packages\\microsoft.identitymodel.logging\\8.1.0\\microsoft.identitymodel.logging.8.1.0.nupkg.sha512",
+    "C:\\Users\\杨宇琨\\.nuget\\packages\\microsoft.identitymodel.tokens\\8.1.0\\microsoft.identitymodel.tokens.8.1.0.nupkg.sha512",
+    "C:\\Users\\杨宇琨\\.nuget\\packages\\microsoft.jsinterop\\7.0.14\\microsoft.jsinterop.7.0.14.nupkg.sha512",
+    "C:\\Users\\杨宇琨\\.nuget\\packages\\mudblazor\\6.11.2\\mudblazor.6.11.2.nupkg.sha512",
+    "C:\\Users\\杨宇琨\\.nuget\\packages\\system.diagnostics.diagnosticsource\\8.0.0\\system.diagnostics.diagnosticsource.8.0.0.nupkg.sha512",
+    "C:\\Users\\杨宇琨\\.nuget\\packages\\system.identitymodel.tokens.jwt\\8.1.0\\system.identitymodel.tokens.jwt.8.1.0.nupkg.sha512",
+    "C:\\Users\\杨宇琨\\.nuget\\packages\\system.io.pipelines\\7.0.0\\system.io.pipelines.7.0.0.nupkg.sha512",
+    "C:\\Users\\杨宇琨\\.nuget\\packages\\microsoft.netcore.app.ref\\8.0.14\\microsoft.netcore.app.ref.8.0.14.nupkg.sha512",
+    "C:\\Users\\杨宇琨\\.nuget\\packages\\microsoft.windowsdesktop.app.ref\\8.0.14\\microsoft.windowsdesktop.app.ref.8.0.14.nupkg.sha512",
+    "C:\\Users\\杨宇琨\\.nuget\\packages\\microsoft.aspnetcore.app.ref\\8.0.14\\microsoft.aspnetcore.app.ref.8.0.14.nupkg.sha512",
+    "C:\\Users\\杨宇琨\\.nuget\\packages\\microsoft.netcore.app.host.win-x64\\8.0.14\\microsoft.netcore.app.host.win-x64.8.0.14.nupkg.sha512"
+  ],
+  "logs": [
+    {
+      "code": "NU1603",
+      "level": "Warning",
+      "warningLevel": 1,
+      "message": "CampusActivity.BlazorWeb 依赖于 System.IdentityModel.Tokens.Jwt (>= 8.0.3)，但没有找到 System.IdentityModel.Tokens.Jwt 8.0.3。已改为解析 System.IdentityModel.Tokens.Jwt 8.1.0。",
+      "libraryId": "System.IdentityModel.Tokens.Jwt",
+      "targetGraphs": [
+        "net8.0"
+      ]
+    }
+  ]
+}

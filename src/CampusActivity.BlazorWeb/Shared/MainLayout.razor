@@ -1,5 +1,6 @@
 ﻿@inherits LayoutComponentBase
 @using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
 
 <div class="page">
     <div class="sidebar">
@@ -10,11 +11,36 @@
         <div class="top-row px-4 auth-header">
             <AuthorizeView>
                 <Authorized>
-                    <span>你好, @context.User.Identity?.Name!</span>
-                    <button class="btn btn-link" @onclick="LogoutAsync">注销</button>
+                    <div class="d-flex align-items-center">
+                        <span class="me-3 d-flex align-items-center">
+                            你好, @GetUserDisplayName(context.User)!
+                        </span>
+                        <div class="dropdown">
+                            <button class="btn btn-outline-secondary dropdown-toggle d-flex align-items-center" type="button" @onclick="ToggleDropdown">
+                                <i class="oi oi-person"></i>
+                            </button>
+                            @if (isDropdownOpen)
+                            {
+                                <div class="dropdown-menu show" style="position: absolute; transform: none !important; top: 100%; right: 0; min-width: 200px;">
+                                    <div class="dropdown-item-text">
+                                        <strong>@context.User.FindFirst("FullName")?.Value</strong>
+                                    </div>
+                                    <div class="dropdown-item-text small text-muted">
+                                        @context.User.FindFirst(ClaimTypes.Email)?.Value
+                                    </div>
+                                    <div class="dropdown-divider"></div>
+                                    <a class="dropdown-item" href="/profile">个人资料</a>
+                                    <button class="dropdown-item" @onclick="LogoutAsync">注销</button>
+                                </div>
+                            }
+                        </div>
+                    </div>
                 </Authorized>
                 <NotAuthorized>
-                    <a href="/login">登录</a>
+                    <div class="d-flex align-items-center">
+                        <a href="/login" class="btn btn-primary me-2">登录</a>
+                        <a href="/register" class="btn btn-outline-primary">注册</a>
+                    </div>
                 </NotAuthorized>
             </AuthorizeView>
         </div>
@@ -27,17 +53,33 @@
 
 @code {
     bool drawerOpen = true;
+    bool isDropdownOpen = false;
 
     void DrawerToggle()
     {
         drawerOpen = !drawerOpen;
     }
 
+    void ToggleDropdown()
+    {
+        isDropdownOpen = !isDropdownOpen;
+    }
+
     [Inject] private IAuthService AuthService { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
 
+    private string GetUserDisplayName(ClaimsPrincipal user)
+    {
+        // 优先使用FullName，如果没有则使用Username
+        var fullName = user.FindFirst("FullName")?.Value;
+        var username = user.FindFirst(ClaimTypes.Name)?.Value;
+        
+        return !string.IsNullOrEmpty(fullName) ? fullName : username ?? "用户";
+    }
+
     private async Task LogoutAsync()
     {
+        isDropdownOpen = false;
         await AuthService.LogoutAsync();
         Navigation.NavigateTo("/");
     }

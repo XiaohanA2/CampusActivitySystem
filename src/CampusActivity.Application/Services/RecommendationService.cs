@@ -214,8 +214,8 @@ public class RecommendationService : IRecommendationService
         var cacheKey = string.Format(AppConstants.CacheKeys.RecommendedActivities, userId);
         await _cache.RemoveAsync(cacheKey);
 
-        // 预热缓存
-        await GetRecommendedActivitiesAsync(userId);
+        // 预热缓存 - 不需要await，因为返回的是IEnumerable
+        _ = GetRecommendedActivitiesAsync(userId);
     }
 
     private async Task<IEnumerable<ActivityDto>> CalculateBasicRecommendations(

@@ -18,6 +18,7 @@ public class UnitOfWork : IUnitOfWork
     private IRepository<ActivityTag>? _activityTags;
     private IRepository<ActivityRecommendation>? _activityRecommendations;
     private IRepository<UserActivityPreference>? _userActivityPreferences;
+    private IRepository<ScheduleItem>? _scheduleItems;
 
     public UnitOfWork(ApplicationDbContext context)
     {
@@ -31,6 +32,7 @@ public class UnitOfWork : IUnitOfWork
     public IRepository<ActivityTag> ActivityTags => _activityTags ??= new Repository<ActivityTag>(_context);
     public IRepository<ActivityRecommendation> ActivityRecommendations => _activityRecommendations ??= new Repository<ActivityRecommendation>(_context);
     public IRepository<UserActivityPreference> UserActivityPreferences => _userActivityPreferences ??= new Repository<UserActivityPreference>(_context);
+    public IRepository<ScheduleItem> ScheduleItems => _scheduleItems ??= new Repository<ScheduleItem>(_context);
 
     public async Task<int> SaveChangesAsync()
     {

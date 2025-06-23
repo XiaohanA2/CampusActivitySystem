@@ -6,6 +6,7 @@ using CampusActivity.Domain.Entities;
 using CampusActivity.Infrastructure.UnitOfWork;
 using CampusActivity.Shared.DTOs;
 using CampusActivity.Shared.Constants;
+using CampusActivity.Shared.Enums;
 
 namespace CampusActivity.Application.Services;
 
@@ -293,6 +294,31 @@ public class ActivityService : IActivityService
             activity.CurrentParticipants++;
             await _unitOfWork.Activities.UpdateAsync(activity);
 
+            // 自动将活动添加到用户的日程表
+            var existingScheduleItem = await _unitOfWork.ScheduleItems.FirstOrDefaultAsync(s =>
+                s.UserId == userId && s.ActivityId == activityId);
+
+            if (existingScheduleItem == null)
+            {
+                var scheduleItem = new ScheduleItem
+                {
+                    UserId = userId,
+                    Title = $"参加活动：{activity.Title}",
+                    Description = activity.Description,
+                    Location = activity.Location,
+                    StartTime = activity.StartTime,
+                    EndTime = activity.EndTime,
+                    Type = ScheduleItemType.Activity,
+                    Priority = ScheduleItemPriority.Medium,
+                    Color = "#007bff", // 蓝色表示活动
+                    IsCompleted = false,
+                    Note = note,
+                    ActivityId = activityId
+                };
+
+                await _unitOfWork.ScheduleItems.AddAsync(scheduleItem);
+            }
+
             await _unitOfWork.SaveChangesAsync();
             await _unitOfWork.CommitTransactionAsync();
 
@@ -331,6 +357,15 @@ public class ActivityService : IActivityService
                 await _unitOfWork.Activities.UpdateAsync(activity);
             }
 
+            // 从日程表中移除对应的活动
+            var scheduleItem = await _unitOfWork.ScheduleItems.FirstOrDefaultAsync(s =>
+                s.UserId == userId && s.ActivityId == activityId);
+
+            if (scheduleItem != null)
+            {
+                await _unitOfWork.ScheduleItems.DeleteAsync(scheduleItem);
+            }
+
             await _unitOfWork.SaveChangesAsync();
             await _unitOfWork.CommitTransactionAsync();
 
@@ -362,24 +397,48 @@ public class ActivityService : IActivityService
 
     public async Task<IEnumerable<ActivityCategoryDto>> GetCategoriesAsync()
     {
-        var cacheKey = AppConstants.CacheKeys.Categories;
-        var cachedCategories = await _cache.GetStringAsync(cacheKey);
-        
-        if (!string.IsNullOrEmpty(cachedCategories))
+        try
         {
-            return JsonSerializer.Deserialize<IEnumerable<ActivityCategoryDto>>(cachedCategories)!;
+            var cacheKey = AppConstants.CacheKeys.Categories;
+            string? cachedCategories = null;
+            
+            try
+            {
+                cachedCategories = await _cache.GetStringAsync(cacheKey);
+            }
+            catch (Exception cacheEx)
+            {
+                _logger.LogWarning(cacheEx, "Redis缓存读取失败，直接从数据库查询");
+            }
+            
+            if (!string.IsNullOrEmpty(cachedCategories))
+            {
+                return JsonSerializer.Deserialize<IEnumerable<ActivityCategoryDto>>(cachedCategories)!;
+            }
+
+            var categories = await _unitOfWork.ActivityCategories.FindAsync(c => c.IsActive);
+            var categoryDtos = _mapper.Map<IEnumerable<ActivityCategoryDto>>(categories);
+
+            try
+            {
+                var serializedCategories = JsonSerializer.Serialize(categoryDtos);
+                await _cache.SetStringAsync(cacheKey, serializedCategories, new DistributedCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = AppConstants.CacheExpiration.Long
+                });
+            }
+            catch (Exception cacheEx)
+            {
+                _logger.LogWarning(cacheEx, "Redis缓存设置失败，继续使用数据库查询");
+            }
+
+            return categoryDtos;
         }
-
-        var categories = await _unitOfWork.ActivityCategories.FindAsync(c => c.IsActive);
-        var categoryDtos = _mapper.Map<IEnumerable<ActivityCategoryDto>>(categories);
-
-        var serializedCategories = JsonSerializer.Serialize(categoryDtos);
-        await _cache.SetStringAsync(cacheKey, serializedCategories, new DistributedCacheEntryOptions
+        catch (Exception ex)
         {
-            AbsoluteExpirationRelativeToNow = AppConstants.CacheExpiration.Long
-        });
-
-        return categoryDtos;
+            _logger.LogError(ex, "获取活动分类失败");
+            throw;
+        }
     }
 
     public async Task<ActivityCategoryDto> CreateCategoryAsync(ActivityCategoryDto categoryDto)
@@ -408,31 +467,55 @@ public class ActivityService : IActivityService
 
     public async Task<IEnumerable<ActivityDto>> GetPopularActivitiesAsync(int count = 10)
     {
-        var cacheKey = AppConstants.CacheKeys.PopularActivities;
-        var cachedActivities = await _cache.GetStringAsync(cacheKey);
-        
-        if (!string.IsNullOrEmpty(cachedActivities))
+        try
         {
-            return JsonSerializer.Deserialize<IEnumerable<ActivityDto>>(cachedActivities)!;
+            var cacheKey = AppConstants.CacheKeys.PopularActivities;
+            string? cachedActivities = null;
+            
+            try
+            {
+                cachedActivities = await _cache.GetStringAsync(cacheKey);
+            }
+            catch (Exception cacheEx)
+            {
+                _logger.LogWarning(cacheEx, "Redis缓存读取失败，直接从数据库查询");
+            }
+            
+            if (!string.IsNullOrEmpty(cachedActivities))
+            {
+                return JsonSerializer.Deserialize<IEnumerable<ActivityDto>>(cachedActivities)!;
+            }
+
+            var activities = await _unitOfWork.Activities.FindAsync(a => 
+                a.Status == ActivityStatus.Published);
+            
+            var popularActivities = activities
+                .OrderByDescending(a => a.CurrentParticipants)
+                .ThenByDescending(a => a.CreatedAt)
+                .Take(count)
+                .ToList();
+
+            var activityDtos = _mapper.Map<IEnumerable<ActivityDto>>(popularActivities);
+
+            try
+            {
+                var serializedActivities = JsonSerializer.Serialize(activityDtos);
+                await _cache.SetStringAsync(cacheKey, serializedActivities, new DistributedCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = AppConstants.CacheExpiration.Medium
+                });
+            }
+            catch (Exception cacheEx)
+            {
+                _logger.LogWarning(cacheEx, "Redis缓存设置失败，继续使用数据库查询");
+            }
+
+            return activityDtos;
         }
-
-        var activities = await _unitOfWork.Activities.FindAsync(a => 
-            a.Status == ActivityStatus.Published);
-        
-        var popularActivities = activities
-            .OrderByDescending(a => a.CurrentParticipants)
-            .ThenByDescending(a => a.CreatedAt)
-            .Take(count)
-            .ToList();
-
-        var activityDtos = _mapper.Map<IEnumerable<ActivityDto>>(popularActivities);
-
-        var serializedActivities = JsonSerializer.Serialize(activityDtos);
-        await _cache.SetStringAsync(cacheKey, serializedActivities, new DistributedCacheEntryOptions
+        catch (Exception ex)
         {
-            AbsoluteExpirationRelativeToNow = AppConstants.CacheExpiration.Medium
-        });
-
-        return activityDtos;
+            _logger.LogError(ex, "获取热门活动失败");
+            throw;
+        }
     }
 } 

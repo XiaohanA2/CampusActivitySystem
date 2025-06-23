@@ -142,4 +142,16 @@ public class AuthService : IAuthService
             return false;
         }
     }
+
+    public async Task<string?> GetTokenAsync()
+    {
+        try
+        {
+            return await _localStorage.GetItemAsync<string>("authToken");
+        }
+        catch
+        {
+            return null;
+        }
+    }
 } 

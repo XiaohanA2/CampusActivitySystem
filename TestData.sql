@@ -45,19 +45,19 @@ INSERT INTO ActivityCategories (Name, Description, IconUrl, IsActive, SortOrder,
 -- =================================
 
 -- 管理员用户
-INSERT INTO Users (Username, Email, PasswordHash, FullName, Phone, Role, IsActive, StudentId, Major, Grade, EmployeeId, Department, Title, CreatedAt, UpdatedAt, IsDeleted) VALUES
+INSERT IGNORE INTO Users (Username, Email, PasswordHash, FullName, Phone, Role, IsActive, StudentId, Major, Grade, EmployeeId, Department, Title, CreatedAt, UpdatedAt, IsDeleted) VALUES
 ('admin', 'admin@campus.edu.cn', '$2a$11$N.7QlhBTpJ4.TBsYZHB8E.jGhKmKoRWa5.Eo6/nPKJ1p7qE8N8lhO', '系统管理员', '13800138000', 3, 1, NULL, NULL, NULL, 'EMP001', '信息技术中心', '系统管理员', NOW(), NOW(), 0),
 ('superadmin', 'superadmin@campus.edu.cn', '$2a$11$N.7QlhBTpJ4.TBsYZHB8E.jGhKmKoRWa5.Eo6/nPKJ1p7qE8N8lhO', '超级管理员', '13800138001', 3, 1, NULL, NULL, NULL, 'EMP002', '校长办公室', '超级管理员', NOW(), NOW(), 0);
 
 -- 教师用户
-INSERT INTO Users (Username, Email, PasswordHash, FullName, Phone, Role, IsActive, StudentId, Major, Grade, EmployeeId, Department, Title, CreatedAt, UpdatedAt, IsDeleted) VALUES
+INSERT IGNORE INTO Users (Username, Email, PasswordHash, FullName, Phone, Role, IsActive, StudentId, Major, Grade, EmployeeId, Department, Title, CreatedAt, UpdatedAt, IsDeleted) VALUES
 ('zhangsan', 'zhangsan@campus.edu.cn', '$2a$11$N.7QlhBTpJ4.TBsYZHB8E.jGhKmKoRWa5.Eo6/nPKJ1p7qE8N8lhO', '张三', '13901234567', 2, 1, NULL, NULL, NULL, 'T001', '计算机科学与技术学院', '教授', NOW(), NOW(), 0),
 ('lisi', 'lisi@campus.edu.cn', '$2a$11$N.7QlhBTpJ4.TBsYZHB8E.jGhKmKoRWa5.Eo6/nPKJ1p7qE8N8lhO', '李四', '13901234568', 2, 1, NULL, NULL, NULL, 'T002', '经济管理学院', '副教授', NOW(), NOW(), 0),
 ('wangwu', 'wangwu@campus.edu.cn', '$2a$11$N.7QlhBTpJ4.TBsYZHB8E.jGhKmKoRWa5.Eo6/nPKJ1p7qE8N8lhO', '王五', '13901234569', 2, 1, NULL, NULL, NULL, 'T003', '文学与新闻传播学院', '讲师', NOW(), NOW(), 0),
 ('zhaoliu', 'zhaoliu@campus.edu.cn', '$2a$11$N.7QlhBTpJ4.TBsYZHB8E.jGhKmKoRWa5.Eo6/nPKJ1p7qE8N8lhO', '赵六', '13901234570', 2, 1, NULL, NULL, NULL, 'T004', '体育学院', '副教授', NOW(), NOW(), 0);
 
 -- 学生用户
-INSERT INTO Users (Username, Email, PasswordHash, FullName, Phone, Role, IsActive, StudentId, Major, Grade, EmployeeId, Department, Title, CreatedAt, UpdatedAt, IsDeleted) VALUES
+INSERT IGNORE INTO Users (Username, Email, PasswordHash, FullName, Phone, Role, IsActive, StudentId, Major, Grade, EmployeeId, Department, Title, CreatedAt, UpdatedAt, IsDeleted) VALUES
 ('student001', 'student001@stu.campus.edu.cn', '$2a$11$N.7QlhBTpJ4.TBsYZHB8E.jGhKmKoRWa5.Eo6/nPKJ1p7qE8N8lhO', '刘小明', '13812345678', 1, 1, '2021001001', '计算机科学与技术', 2023, NULL, NULL, NULL, NOW(), NOW(), 0),
 ('student002', 'student002@stu.campus.edu.cn', '$2a$11$N.7QlhBTpJ4.TBsYZHB8E.jGhKmKoRWa5.Eo6/nPKJ1p7qE8N8lhO', '陈小红', '13812345679', 1, 1, '2021001002', '软件工程', 2023, NULL, NULL, NULL, NOW(), NOW(), 0),
 ('student003', 'student003@stu.campus.edu.cn', '$2a$11$N.7QlhBTpJ4.TBsYZHB8E.jGhKmKoRWa5.Eo6/nPKJ1p7qE8N8lhO', '李小芳', '13812345680', 1, 1, '2022002001', '国际经济与贸易', 2022, NULL, NULL, NULL, NOW(), NOW(), 0),
@@ -74,164 +74,426 @@ INSERT INTO Users (Username, Email, PasswordHash, FullName, Phone, Role, IsActiv
 -- =================================
 
 -- 学术讲座类活动
-INSERT INTO Activities (Title, Description, Location, StartTime, EndTime, RegistrationDeadline, MaxParticipants, CurrentParticipants, ImageUrl, Status, CategoryId, CreatedBy, UpdatedBy, CreatedAt, UpdatedAt, IsDeleted) VALUES
-('人工智能前沿技术讲座', '邀请业界专家分享最新AI技术发展趋势，包括大模型、机器学习、深度学习等前沿技术。', '学术报告厅A101', '2024-01-15 14:00:00', '2024-01-15 16:00:00', '2024-01-14 18:00:00', 200, 0, '/images/ai-lecture.jpg', 1, 1, 3, 3, NOW(), NOW(), 0),
-('区块链技术及应用研讨会', '深入探讨区块链技术原理、应用场景以及未来发展方向，邀请技术专家现场答疑。', '计算机学院会议室', '2024-01-18 09:00:00', '2024-01-18 11:30:00', '2024-01-17 12:00:00', 80, 0, '/images/blockchain.jpg', 1, 1, 3, 3, NOW(), NOW(), 0),
-('数字经济时代的商业模式创新', '分析数字化转型背景下企业商业模式的变革与创新策略。', '经管学院阶梯教室', '2024-01-20 15:30:00', '2024-01-20 17:30:00', '2024-01-19 20:00:00', 150, 0, '/images/digital-economy.jpg', 1, 1, 4, 4, NOW(), NOW(), 0);
+INSERT INTO Activities (Title, Description, Location, StartTime, EndTime, RegistrationDeadline, MaxParticipants, CurrentParticipants, ImageUrl, Status, CategoryId, CreatedBy, UpdatedBy, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT '人工智能前沿技术讲座', '邀请业界专家分享最新AI技术发展趋势，包括大模型、机器学习、深度学习等前沿技术。', '学术报告厅A101', '2024-01-15 14:00:00', '2024-01-15 16:00:00', '2024-01-14 18:00:00', 200, 0, '/images/ai-lecture.jpg', 1, 1, u.Id, u.Id, NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'zhangsan';
+
+INSERT INTO Activities (Title, Description, Location, StartTime, EndTime, RegistrationDeadline, MaxParticipants, CurrentParticipants, ImageUrl, Status, CategoryId, CreatedBy, UpdatedBy, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT '区块链技术及应用研讨会', '深入探讨区块链技术原理、应用场景以及未来发展方向，邀请技术专家现场答疑。', '计算机学院会议室', '2024-01-18 09:00:00', '2024-01-18 11:30:00', '2024-01-17 12:00:00', 80, 0, '/images/blockchain.jpg', 1, 1, u.Id, u.Id, NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'zhangsan';
+
+INSERT INTO Activities (Title, Description, Location, StartTime, EndTime, RegistrationDeadline, MaxParticipants, CurrentParticipants, ImageUrl, Status, CategoryId, CreatedBy, UpdatedBy, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT '数字经济时代的商业模式创新', '分析数字化转型背景下企业商业模式的变革与创新策略。', '经管学院阶梯教室', '2024-01-20 15:30:00', '2024-01-20 17:30:00', '2024-01-19 20:00:00', 150, 0, '/images/digital-economy.jpg', 1, 1, u.Id, u.Id, NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'lisi';
 
 -- 文艺演出类活动
-INSERT INTO Activities (Title, Description, Location, StartTime, EndTime, RegistrationDeadline, MaxParticipants, CurrentParticipants, ImageUrl, Status, CategoryId, CreatedBy, UpdatedBy, CreatedAt, UpdatedAt, IsDeleted) VALUES
-('校园新年音乐会', '由校合唱团、器乐队联合演出，演唱经典中外歌曲，演奏优美乐曲，欢庆新年。', '大学生活动中心', '2024-01-25 19:30:00', '2024-01-25 21:30:00', '2024-01-23 18:00:00', 500, 0, '/images/concert.jpg', 1, 2, 5, 5, NOW(), NOW(), 0),
-('话剧《青春无悔》演出', '原创校园话剧，讲述当代大学生奋斗成长的青春故事，传递正能量。', '艺术楼小剧场', '2024-01-28 19:00:00', '2024-01-28 21:00:00', '2024-01-26 12:00:00', 120, 0, '/images/drama.jpg', 1, 2, 5, 5, NOW(), NOW(), 0),
-('传统文化诗词朗诵会', '师生共同参与，朗诵经典古诗词，感受中华传统文化魅力。', '图书馆报告厅', '2024-02-02 14:30:00', '2024-02-02 16:30:00', '2024-02-01 18:00:00', 80, 0, '/images/poetry.jpg', 1, 2, 5, 5, NOW(), NOW(), 0);
+INSERT INTO Activities (Title, Description, Location, StartTime, EndTime, RegistrationDeadline, MaxParticipants, CurrentParticipants, ImageUrl, Status, CategoryId, CreatedBy, UpdatedBy, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT '校园新年音乐会', '由校合唱团、器乐队联合演出，演唱经典中外歌曲，演奏优美乐曲，欢庆新年。', '大学生活动中心', '2024-01-25 19:30:00', '2024-01-25 21:30:00', '2024-01-23 18:00:00', 500, 0, '/images/concert.jpg', 1, 2, u.Id, u.Id, NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'wangwu';
+
+INSERT INTO Activities (Title, Description, Location, StartTime, EndTime, RegistrationDeadline, MaxParticipants, CurrentParticipants, ImageUrl, Status, CategoryId, CreatedBy, UpdatedBy, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT '话剧《青春无悔》演出', '原创校园话剧，讲述当代大学生奋斗成长的青春故事，传递正能量。', '艺术楼小剧场', '2024-01-28 19:00:00', '2024-01-28 21:00:00', '2024-01-26 12:00:00', 120, 0, '/images/drama.jpg', 1, 2, u.Id, u.Id, NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'wangwu';
+
+INSERT INTO Activities (Title, Description, Location, StartTime, EndTime, RegistrationDeadline, MaxParticipants, CurrentParticipants, ImageUrl, Status, CategoryId, CreatedBy, UpdatedBy, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT '传统文化诗词朗诵会', '师生共同参与，朗诵经典古诗词，感受中华传统文化魅力。', '图书馆报告厅', '2024-02-02 14:30:00', '2024-02-02 16:30:00', '2024-02-01 18:00:00', 80, 0, '/images/poetry.jpg', 1, 2, u.Id, u.Id, NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'wangwu';
 
 -- 体育竞技类活动
-INSERT INTO Activities (Title, Description, Location, StartTime, EndTime, RegistrationDeadline, MaxParticipants, CurrentParticipants, ImageUrl, Status, CategoryId, CreatedBy, UpdatedBy, CreatedAt, UpdatedAt, IsDeleted) VALUES
-('校园马拉松比赛', '全校师生共同参与的健康跑活动，设置5公里、10公里两个组别。', '校园环形跑道', '2024-02-05 08:00:00', '2024-02-05 11:00:00', '2024-02-03 18:00:00', 300, 0, '/images/marathon.jpg', 1, 3, 6, 6, NOW(), NOW(), 0),
-('篮球友谊赛', '各学院篮球队友谊赛，促进学院间交流，展现青春活力。', '体育馆篮球场', '2024-02-08 16:00:00', '2024-02-08 18:30:00', '2024-02-06 20:00:00', 100, 0, '/images/basketball.jpg', 1, 3, 6, 6, NOW(), NOW(), 0),
-('羽毛球大赛', '校内羽毛球爱好者比赛，设置男单、女单、混双等项目。', '体育馆羽毛球场', '2024-02-12 09:00:00', '2024-02-12 17:00:00', '2024-02-10 18:00:00', 64, 0, '/images/badminton.jpg', 1, 3, 6, 6, NOW(), NOW(), 0);
+INSERT INTO Activities (Title, Description, Location, StartTime, EndTime, RegistrationDeadline, MaxParticipants, CurrentParticipants, ImageUrl, Status, CategoryId, CreatedBy, UpdatedBy, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT '校园马拉松比赛', '全校师生共同参与的健康跑活动，设置5公里、10公里两个组别。', '校园环形跑道', '2024-02-05 08:00:00', '2024-02-05 11:00:00', '2024-02-03 18:00:00', 300, 0, '/images/marathon.jpg', 1, 3, u.Id, u.Id, NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'zhaoliu';
+
+INSERT INTO Activities (Title, Description, Location, StartTime, EndTime, RegistrationDeadline, MaxParticipants, CurrentParticipants, ImageUrl, Status, CategoryId, CreatedBy, UpdatedBy, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT '篮球友谊赛', '各学院篮球队友谊赛，促进学院间交流，展现青春活力。', '体育馆篮球场', '2024-02-08 16:00:00', '2024-02-08 18:30:00', '2024-02-06 20:00:00', 100, 0, '/images/basketball.jpg', 1, 3, u.Id, u.Id, NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'zhaoliu';
+
+INSERT INTO Activities (Title, Description, Location, StartTime, EndTime, RegistrationDeadline, MaxParticipants, CurrentParticipants, ImageUrl, Status, CategoryId, CreatedBy, UpdatedBy, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT '羽毛球大赛', '校内羽毛球爱好者比赛，设置男单、女单、混双等项目。', '体育馆羽毛球场', '2024-02-12 09:00:00', '2024-02-12 17:00:00', '2024-02-10 18:00:00', 64, 0, '/images/badminton.jpg', 1, 3, u.Id, u.Id, NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'zhaoliu';
 
 -- 社会实践类活动
-INSERT INTO Activities (Title, Description, Location, StartTime, EndTime, RegistrationDeadline, MaxParticipants, CurrentParticipants, ImageUrl, Status, CategoryId, CreatedBy, UpdatedBy, CreatedAt, UpdatedAt, IsDeleted) VALUES
-('社区养老院志愿服务', '组织学生到附近养老院开展志愿服务活动，陪伴老人，传递温暖。', '阳光养老院', '2024-02-15 09:00:00', '2024-02-15 16:00:00', '2024-02-13 18:00:00', 30, 0, '/images/volunteer.jpg', 1, 4, 4, 4, NOW(), NOW(), 0),
-('环保宣传实践活动', '到社区开展环保知识宣传，提高居民环保意识，共建美好家园。', '春华社区', '2024-02-18 14:00:00', '2024-02-18 17:00:00', '2024-02-16 20:00:00', 50, 0, '/images/environment.jpg', 1, 4, 4, 4, NOW(), NOW(), 0);
+INSERT INTO Activities (Title, Description, Location, StartTime, EndTime, RegistrationDeadline, MaxParticipants, CurrentParticipants, ImageUrl, Status, CategoryId, CreatedBy, UpdatedBy, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT '社区养老院志愿服务', '组织学生到附近养老院开展志愿服务活动，陪伴老人，传递温暖。', '阳光养老院', '2024-02-15 09:00:00', '2024-02-15 16:00:00', '2024-02-13 18:00:00', 30, 0, '/images/volunteer.jpg', 1, 4, u.Id, u.Id, NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'lisi';
+
+INSERT INTO Activities (Title, Description, Location, StartTime, EndTime, RegistrationDeadline, MaxParticipants, CurrentParticipants, ImageUrl, Status, CategoryId, CreatedBy, UpdatedBy, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT '环保宣传实践活动', '到社区开展环保知识宣传，提高居民环保意识，共建美好家园。', '春华社区', '2024-02-18 14:00:00', '2024-02-18 17:00:00', '2024-02-16 20:00:00', 50, 0, '/images/environment.jpg', 1, 4, u.Id, u.Id, NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'lisi';
 
 -- 创新创业类活动
-INSERT INTO Activities (Title, Description, Location, StartTime, EndTime, RegistrationDeadline, MaxParticipants, CurrentParticipants, ImageUrl, Status, CategoryId, CreatedBy, UpdatedBy, CreatedAt, UpdatedAt, IsDeleted) VALUES
-('大学生创业计划大赛', '鼓励学生展示创新创业项目，提供项目路演和专家指导机会。', '创新创业园', '2024-02-22 09:00:00', '2024-02-22 17:00:00', '2024-02-20 18:00:00', 100, 0, '/images/startup.jpg', 1, 5, 3, 3, NOW(), NOW(), 0),
-('科技创新作品展示', '展示学生科技创新成果，促进学术交流与合作。', '科技楼展厅', '2024-02-25 10:00:00', '2024-02-25 16:00:00', '2024-02-23 18:00:00', 200, 0, '/images/innovation.jpg', 1, 5, 3, 3, NOW(), NOW(), 0);
+INSERT INTO Activities (Title, Description, Location, StartTime, EndTime, RegistrationDeadline, MaxParticipants, CurrentParticipants, ImageUrl, Status, CategoryId, CreatedBy, UpdatedBy, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT '大学生创业计划大赛', '鼓励学生展示创新创业项目，提供项目路演和专家指导机会。', '创新创业园', '2024-02-22 09:00:00', '2024-02-22 17:00:00', '2024-02-20 18:00:00', 100, 0, '/images/startup.jpg', 1, 5, u.Id, u.Id, NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'zhangsan';
+
+INSERT INTO Activities (Title, Description, Location, StartTime, EndTime, RegistrationDeadline, MaxParticipants, CurrentParticipants, ImageUrl, Status, CategoryId, CreatedBy, UpdatedBy, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT '科技创新作品展示', '展示学生科技创新成果，促进学术交流与合作。', '科技楼展厅', '2024-02-25 10:00:00', '2024-02-25 16:00:00', '2024-02-23 18:00:00', 200, 0, '/images/innovation.jpg', 1, 5, u.Id, u.Id, NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'zhangsan';
 
 -- 交流参观类活动
-INSERT INTO Activities (Title, Description, Location, StartTime, EndTime, RegistrationDeadline, MaxParticipants, CurrentParticipants, ImageUrl, Status, CategoryId, CreatedBy, UpdatedBy, CreatedAt, UpdatedAt, IsDeleted) VALUES
-('知名科技企业参观', '组织学生参观当地知名科技企业，了解行业发展和就业前景。', '华为技术有限公司', '2024-03-01 09:00:00', '2024-03-01 16:00:00', '2024-02-28 18:00:00', 40, 0, '/images/company-visit.jpg', 1, 6, 3, 3, NOW(), NOW(), 0),
-('博物馆文化之旅', '参观市博物馆，感受历史文化底蕴，增长见识。', '市历史博物馆', '2024-03-05 14:00:00', '2024-03-05 17:00:00', '2024-03-03 18:00:00', 60, 0, '/images/museum.jpg', 1, 6, 5, 5, NOW(), NOW(), 0);
+INSERT INTO Activities (Title, Description, Location, StartTime, EndTime, RegistrationDeadline, MaxParticipants, CurrentParticipants, ImageUrl, Status, CategoryId, CreatedBy, UpdatedBy, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT '知名科技企业参观', '组织学生参观当地知名科技企业，了解行业发展和就业前景。', '华为技术有限公司', '2024-03-01 09:00:00', '2024-03-01 16:00:00', '2024-02-28 18:00:00', 40, 0, '/images/company-visit.jpg', 1, 6, u.Id, u.Id, NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'zhangsan';
+
+INSERT INTO Activities (Title, Description, Location, StartTime, EndTime, RegistrationDeadline, MaxParticipants, CurrentParticipants, ImageUrl, Status, CategoryId, CreatedBy, UpdatedBy, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT '博物馆文化之旅', '参观市博物馆，感受历史文化底蕴，增长见识。', '市历史博物馆', '2024-03-05 14:00:00', '2024-03-05 17:00:00', '2024-03-03 18:00:00', 60, 0, '/images/museum.jpg', 1, 6, u.Id, u.Id, NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'wangwu';
 
 -- =================================
 -- 4. 活动标签数据 (ActivityTags)
 -- =================================
-INSERT INTO ActivityTags (ActivityId, TagName, CreatedAt, UpdatedAt, IsDeleted) VALUES
+
 -- AI讲座标签
-(1, '人工智能', NOW(), NOW(), 0),
-(1, '技术前沿', NOW(), NOW(), 0),
-(1, '学术报告', NOW(), NOW(), 0),
+INSERT INTO ActivityTags (ActivityId, TagName, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT a.Id, '人工智能', NOW(), NOW(), 0
+FROM Activities a WHERE a.Title = '人工智能前沿技术讲座';
+
+INSERT INTO ActivityTags (ActivityId, TagName, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT a.Id, '技术前沿', NOW(), NOW(), 0
+FROM Activities a WHERE a.Title = '人工智能前沿技术讲座';
+
+INSERT INTO ActivityTags (ActivityId, TagName, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT a.Id, '学术报告', NOW(), NOW(), 0
+FROM Activities a WHERE a.Title = '人工智能前沿技术讲座';
+
 -- 区块链研讨会标签
-(2, '区块链', NOW(), NOW(), 0),
-(2, '技术研讨', NOW(), NOW(), 0),
-(2, '专家答疑', NOW(), NOW(), 0),
+INSERT INTO ActivityTags (ActivityId, TagName, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT a.Id, '区块链', NOW(), NOW(), 0
+FROM Activities a WHERE a.Title = '区块链技术及应用研讨会';
+
+INSERT INTO ActivityTags (ActivityId, TagName, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT a.Id, '技术研讨', NOW(), NOW(), 0
+FROM Activities a WHERE a.Title = '区块链技术及应用研讨会';
+
+INSERT INTO ActivityTags (ActivityId, TagName, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT a.Id, '专家答疑', NOW(), NOW(), 0
+FROM Activities a WHERE a.Title = '区块链技术及应用研讨会';
+
 -- 数字经济讲座标签
-(3, '数字经济', NOW(), NOW(), 0),
-(3, '商业模式', NOW(), NOW(), 0),
-(3, '创新思维', NOW(), NOW(), 0),
+INSERT INTO ActivityTags (ActivityId, TagName, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT a.Id, '数字经济', NOW(), NOW(), 0
+FROM Activities a WHERE a.Title = '数字经济时代的商业模式创新';
+
+INSERT INTO ActivityTags (ActivityId, TagName, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT a.Id, '商业模式', NOW(), NOW(), 0
+FROM Activities a WHERE a.Title = '数字经济时代的商业模式创新';
+
+INSERT INTO ActivityTags (ActivityId, TagName, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT a.Id, '创新思维', NOW(), NOW(), 0
+FROM Activities a WHERE a.Title = '数字经济时代的商业模式创新';
+
 -- 音乐会标签
-(4, '音乐', NOW(), NOW(), 0),
-(4, '新年庆典', NOW(), NOW(), 0),
-(4, '文艺演出', NOW(), NOW(), 0),
+INSERT INTO ActivityTags (ActivityId, TagName, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT a.Id, '音乐', NOW(), NOW(), 0
+FROM Activities a WHERE a.Title = '校园新年音乐会';
+
+INSERT INTO ActivityTags (ActivityId, TagName, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT a.Id, '新年庆典', NOW(), NOW(), 0
+FROM Activities a WHERE a.Title = '校园新年音乐会';
+
+INSERT INTO ActivityTags (ActivityId, TagName, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT a.Id, '文艺演出', NOW(), NOW(), 0
+FROM Activities a WHERE a.Title = '校园新年音乐会';
+
 -- 话剧标签
-(5, '话剧', NOW(), NOW(), 0),
-(5, '原创作品', NOW(), NOW(), 0),
-(5, '青春励志', NOW(), NOW(), 0),
+INSERT INTO ActivityTags (ActivityId, TagName, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT a.Id, '话剧', NOW(), NOW(), 0
+FROM Activities a WHERE a.Title = '话剧《青春无悔》演出';
+
+INSERT INTO ActivityTags (ActivityId, TagName, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT a.Id, '原创作品', NOW(), NOW(), 0
+FROM Activities a WHERE a.Title = '话剧《青春无悔》演出';
+
+INSERT INTO ActivityTags (ActivityId, TagName, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT a.Id, '青春励志', NOW(), NOW(), 0
+FROM Activities a WHERE a.Title = '话剧《青春无悔》演出';
+
 -- 马拉松标签
-(8, '马拉松', NOW(), NOW(), 0),
-(8, '健康运动', NOW(), NOW(), 0),
-(8, '全民参与', NOW(), NOW(), 0),
+INSERT INTO ActivityTags (ActivityId, TagName, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT a.Id, '马拉松', NOW(), NOW(), 0
+FROM Activities a WHERE a.Title = '校园马拉松比赛';
+
+INSERT INTO ActivityTags (ActivityId, TagName, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT a.Id, '健康运动', NOW(), NOW(), 0
+FROM Activities a WHERE a.Title = '校园马拉松比赛';
+
+INSERT INTO ActivityTags (ActivityId, TagName, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT a.Id, '全民参与', NOW(), NOW(), 0
+FROM Activities a WHERE a.Title = '校园马拉松比赛';
+
 -- 志愿服务标签
-(11, '志愿服务', NOW(), NOW(), 0),
-(11, '敬老爱老', NOW(), NOW(), 0),
-(11, '社会责任', NOW(), NOW(), 0);
+INSERT INTO ActivityTags (ActivityId, TagName, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT a.Id, '志愿服务', NOW(), NOW(), 0
+FROM Activities a WHERE a.Title = '社区养老院志愿服务';
+
+INSERT INTO ActivityTags (ActivityId, TagName, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT a.Id, '敬老爱老', NOW(), NOW(), 0
+FROM Activities a WHERE a.Title = '社区养老院志愿服务';
+
+INSERT INTO ActivityTags (ActivityId, TagName, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT a.Id, '社会责任', NOW(), NOW(), 0
+FROM Activities a WHERE a.Title = '社区养老院志愿服务';
 
 -- =================================
 -- 5. 活动报名数据 (ActivityRegistrations)
 -- =================================
 
 -- 为AI讲座添加报名记录
-INSERT INTO ActivityRegistrations (ActivityId, UserId, Status, Note, RegistrationTime, CreatedAt, UpdatedAt, IsDeleted) VALUES
-(1, 7, 1, '对AI技术很感兴趣', '2024-01-10 14:30:00', NOW(), NOW(), 0),
-(1, 8, 1, '希望了解最新技术趋势', '2024-01-10 15:45:00', NOW(), NOW(), 0),
-(1, 9, 1, NULL, '2024-01-11 09:20:00', NOW(), NOW(), 0),
-(1, 10, 1, '为毕业设计收集资料', '2024-01-11 16:30:00', NOW(), NOW(), 0),
-(1, 11, 1, NULL, '2024-01-12 10:15:00', NOW(), NOW(), 0);
+INSERT IGNORE INTO ActivityRegistrations (ActivityId, UserId, Status, Note, RegistrationTime, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT a.Id, u.Id, 1, '对AI技术很感兴趣', '2024-01-10 14:30:00', NOW(), NOW(), 0
+FROM Activities a, Users u 
+WHERE a.Title = '人工智能前沿技术讲座' AND u.Username = 'student001';
+
+INSERT IGNORE INTO ActivityRegistrations (ActivityId, UserId, Status, Note, RegistrationTime, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT a.Id, u.Id, 1, '希望了解最新技术趋势', '2024-01-10 15:45:00', NOW(), NOW(), 0
+FROM Activities a, Users u 
+WHERE a.Title = '人工智能前沿技术讲座' AND u.Username = 'student002';
+
+INSERT IGNORE INTO ActivityRegistrations (ActivityId, UserId, Status, Note, RegistrationTime, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT a.Id, u.Id, 1, NULL, '2024-01-11 09:20:00', NOW(), NOW(), 0
+FROM Activities a, Users u 
+WHERE a.Title = '人工智能前沿技术讲座' AND u.Username = 'student003';
+
+INSERT IGNORE INTO ActivityRegistrations (ActivityId, UserId, Status, Note, RegistrationTime, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT a.Id, u.Id, 1, '为毕业设计收集资料', '2024-01-11 16:30:00', NOW(), NOW(), 0
+FROM Activities a, Users u 
+WHERE a.Title = '人工智能前沿技术讲座' AND u.Username = 'student004';
+
+INSERT IGNORE INTO ActivityRegistrations (ActivityId, UserId, Status, Note, RegistrationTime, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT a.Id, u.Id, 1, NULL, '2024-01-12 10:15:00', NOW(), NOW(), 0
+FROM Activities a, Users u 
+WHERE a.Title = '人工智能前沿技术讲座' AND u.Username = 'student005';
 
 -- 为音乐会添加报名记录
-INSERT INTO ActivityRegistrations (ActivityId, UserId, Status, Note, RegistrationTime, CreatedAt, UpdatedAt, IsDeleted) VALUES
-(4, 7, 1, '喜欢音乐，期待演出', '2024-01-20 19:30:00', NOW(), NOW(), 0),
-(4, 8, 1, NULL, '2024-01-21 08:45:00', NOW(), NOW(), 0),
-(4, 12, 1, '和朋友一起参加', '2024-01-21 14:20:00', NOW(), NOW(), 0),
-(4, 13, 1, NULL, '2024-01-22 11:30:00', NOW(), NOW(), 0),
-(4, 14, 1, '支持校园文化活动', '2024-01-22 16:45:00', NOW(), NOW(), 0),
-(4, 15, 1, NULL, '2024-01-23 09:15:00', NOW(), NOW(), 0),
-(4, 16, 1, NULL, '2024-01-23 13:50:00', NOW(), NOW(), 0);
+INSERT IGNORE INTO ActivityRegistrations (ActivityId, UserId, Status, Note, RegistrationTime, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT a.Id, u.Id, 1, '喜欢音乐，期待演出', '2024-01-20 19:30:00', NOW(), NOW(), 0
+FROM Activities a, Users u 
+WHERE a.Title = '校园新年音乐会' AND u.Username = 'student001';
+
+INSERT IGNORE INTO ActivityRegistrations (ActivityId, UserId, Status, Note, RegistrationTime, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT a.Id, u.Id, 1, NULL, '2024-01-21 08:45:00', NOW(), NOW(), 0
+FROM Activities a, Users u 
+WHERE a.Title = '校园新年音乐会' AND u.Username = 'student002';
+
+INSERT IGNORE INTO ActivityRegistrations (ActivityId, UserId, Status, Note, RegistrationTime, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT a.Id, u.Id, 1, '和朋友一起参加', '2024-01-21 14:20:00', NOW(), NOW(), 0
+FROM Activities a, Users u 
+WHERE a.Title = '校园新年音乐会' AND u.Username = 'student006';
+
+INSERT IGNORE INTO ActivityRegistrations (ActivityId, UserId, Status, Note, RegistrationTime, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT a.Id, u.Id, 1, NULL, '2024-01-22 11:30:00', NOW(), NOW(), 0
+FROM Activities a, Users u 
+WHERE a.Title = '校园新年音乐会' AND u.Username = 'student007';
+
+INSERT IGNORE INTO ActivityRegistrations (ActivityId, UserId, Status, Note, RegistrationTime, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT a.Id, u.Id, 1, '支持校园文化活动', '2024-01-22 16:45:00', NOW(), NOW(), 0
+FROM Activities a, Users u 
+WHERE a.Title = '校园新年音乐会' AND u.Username = 'student008';
+
+INSERT IGNORE INTO ActivityRegistrations (ActivityId, UserId, Status, Note, RegistrationTime, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT a.Id, u.Id, 1, NULL, '2024-01-23 09:15:00', NOW(), NOW(), 0
+FROM Activities a, Users u 
+WHERE a.Title = '校园新年音乐会' AND u.Username = 'student009';
+
+INSERT IGNORE INTO ActivityRegistrations (ActivityId, UserId, Status, Note, RegistrationTime, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT a.Id, u.Id, 1, NULL, '2024-01-23 13:50:00', NOW(), NOW(), 0
+FROM Activities a, Users u 
+WHERE a.Title = '校园新年音乐会' AND u.Username = 'student010';
 
 -- 为马拉松比赛添加报名记录
-INSERT INTO ActivityRegistrations (ActivityId, UserId, Status, Note, RegistrationTime, CreatedAt, UpdatedAt, IsDeleted) VALUES
-(8, 13, 1, '报名5公里组', '2024-01-30 10:30:00', NOW(), NOW(), 0),
-(8, 14, 1, '报名10公里组', '2024-01-30 14:20:00', NOW(), NOW(), 0),
-(8, 15, 1, '报名5公里组', '2024-01-31 09:45:00', NOW(), NOW(), 0),
-(8, 16, 1, '报名5公里组，第一次参加', '2024-01-31 16:30:00', NOW(), NOW(), 0),
-(8, 7, 1, '报名10公里组', '2024-02-01 11:15:00', NOW(), NOW(), 0);
+INSERT IGNORE INTO ActivityRegistrations (ActivityId, UserId, Status, Note, RegistrationTime, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT a.Id, u.Id, 1, '报名5公里组', '2024-01-30 10:30:00', NOW(), NOW(), 0
+FROM Activities a, Users u 
+WHERE a.Title = '校园马拉松比赛' AND u.Username = 'student007';
+
+INSERT IGNORE INTO ActivityRegistrations (ActivityId, UserId, Status, Note, RegistrationTime, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT a.Id, u.Id, 1, '报名10公里组', '2024-01-30 14:20:00', NOW(), NOW(), 0
+FROM Activities a, Users u 
+WHERE a.Title = '校园马拉松比赛' AND u.Username = 'student008';
+
+INSERT IGNORE INTO ActivityRegistrations (ActivityId, UserId, Status, Note, RegistrationTime, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT a.Id, u.Id, 1, '报名5公里组', '2024-01-31 09:45:00', NOW(), NOW(), 0
+FROM Activities a, Users u 
+WHERE a.Title = '校园马拉松比赛' AND u.Username = 'student009';
+
+INSERT IGNORE INTO ActivityRegistrations (ActivityId, UserId, Status, Note, RegistrationTime, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT a.Id, u.Id, 1, '报名5公里组，第一次参加', '2024-01-31 16:30:00', NOW(), NOW(), 0
+FROM Activities a, Users u 
+WHERE a.Title = '校园马拉松比赛' AND u.Username = 'student010';
 
 -- =================================
 -- 6. 用户活动偏好数据 (UserActivityPreferences)
 -- =================================
-INSERT INTO UserActivityPreferences (UserId, CategoryId, Weight, CreatedAt, UpdatedAt, IsDeleted) VALUES
+
 -- 学生001的偏好 (计算机专业学生)
-(7, 1, 0.9, NOW(), NOW(), 0),  -- 学术讲座 高权重
-(7, 5, 0.8, NOW(), NOW(), 0),  -- 创新创业 高权重
-(7, 3, 0.6, NOW(), NOW(), 0),  -- 体育竞技 中等权重
-(7, 2, 0.4, NOW(), NOW(), 0),  -- 文艺演出 低权重
+INSERT IGNORE INTO UserActivityPreferences (UserId, CategoryId, Weight, CreatedAt, UpdatedAt, LastUpdated, IsDeleted) 
+SELECT u.Id, 1, 0.9, NOW(), NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'student001';
+
+INSERT IGNORE INTO UserActivityPreferences (UserId, CategoryId, Weight, CreatedAt, UpdatedAt, LastUpdated, IsDeleted) 
+SELECT u.Id, 5, 0.8, NOW(), NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'student001';
+
+INSERT IGNORE INTO UserActivityPreferences (UserId, CategoryId, Weight, CreatedAt, UpdatedAt, LastUpdated, IsDeleted) 
+SELECT u.Id, 3, 0.6, NOW(), NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'student001';
+
+INSERT IGNORE INTO UserActivityPreferences (UserId, CategoryId, Weight, CreatedAt, UpdatedAt, LastUpdated, IsDeleted) 
+SELECT u.Id, 2, 0.4, NOW(), NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'student001';
 
 -- 学生002的偏好 (软件工程学生)
-(8, 1, 0.85, NOW(), NOW(), 0), -- 学术讲座
-(8, 5, 0.9, NOW(), NOW(), 0),  -- 创新创业
-(8, 6, 0.7, NOW(), NOW(), 0),  -- 交流参观
-(8, 3, 0.5, NOW(), NOW(), 0),  -- 体育竞技
+INSERT IGNORE INTO UserActivityPreferences (UserId, CategoryId, Weight, CreatedAt, UpdatedAt, LastUpdated, IsDeleted) 
+SELECT u.Id, 1, 0.85, NOW(), NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'student002';
+
+INSERT IGNORE INTO UserActivityPreferences (UserId, CategoryId, Weight, CreatedAt, UpdatedAt, LastUpdated, IsDeleted) 
+SELECT u.Id, 5, 0.9, NOW(), NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'student002';
+
+INSERT IGNORE INTO UserActivityPreferences (UserId, CategoryId, Weight, CreatedAt, UpdatedAt, LastUpdated, IsDeleted) 
+SELECT u.Id, 6, 0.7, NOW(), NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'student002';
+
+INSERT IGNORE INTO UserActivityPreferences (UserId, CategoryId, Weight, CreatedAt, UpdatedAt, LastUpdated, IsDeleted) 
+SELECT u.Id, 3, 0.5, NOW(), NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'student002';
 
 -- 学生003的偏好 (经济学学生)
-(9, 1, 0.7, NOW(), NOW(), 0),  -- 学术讲座
-(9, 5, 0.8, NOW(), NOW(), 0),  -- 创新创业
-(9, 6, 0.9, NOW(), NOW(), 0),  -- 交流参观
-(9, 2, 0.6, NOW(), NOW(), 0),  -- 文艺演出
+INSERT IGNORE INTO UserActivityPreferences (UserId, CategoryId, Weight, CreatedAt, UpdatedAt, LastUpdated, IsDeleted) 
+SELECT u.Id, 1, 0.7, NOW(), NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'student003';
+
+INSERT IGNORE INTO UserActivityPreferences (UserId, CategoryId, Weight, CreatedAt, UpdatedAt, LastUpdated, IsDeleted) 
+SELECT u.Id, 5, 0.8, NOW(), NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'student003';
+
+INSERT IGNORE INTO UserActivityPreferences (UserId, CategoryId, Weight, CreatedAt, UpdatedAt, LastUpdated, IsDeleted) 
+SELECT u.Id, 6, 0.9, NOW(), NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'student003';
+
+INSERT IGNORE INTO UserActivityPreferences (UserId, CategoryId, Weight, CreatedAt, UpdatedAt, LastUpdated, IsDeleted) 
+SELECT u.Id, 2, 0.6, NOW(), NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'student003';
 
 -- 学生004的偏好 (管理学学生)
-(10, 1, 0.6, NOW(), NOW(), 0), -- 学术讲座
-(10, 5, 0.9, NOW(), NOW(), 0), -- 创新创业
-(10, 6, 0.8, NOW(), NOW(), 0), -- 交流参观
-(10, 4, 0.7, NOW(), NOW(), 0), -- 社会实践
+INSERT IGNORE INTO UserActivityPreferences (UserId, CategoryId, Weight, CreatedAt, UpdatedAt, LastUpdated, IsDeleted) 
+SELECT u.Id, 1, 0.6, NOW(), NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'student004';
+
+INSERT IGNORE INTO UserActivityPreferences (UserId, CategoryId, Weight, CreatedAt, UpdatedAt, LastUpdated, IsDeleted) 
+SELECT u.Id, 5, 0.9, NOW(), NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'student004';
+
+INSERT IGNORE INTO UserActivityPreferences (UserId, CategoryId, Weight, CreatedAt, UpdatedAt, LastUpdated, IsDeleted) 
+SELECT u.Id, 6, 0.8, NOW(), NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'student004';
+
+INSERT IGNORE INTO UserActivityPreferences (UserId, CategoryId, Weight, CreatedAt, UpdatedAt, LastUpdated, IsDeleted) 
+SELECT u.Id, 4, 0.7, NOW(), NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'student004';
 
 -- 学生005的偏好 (文学学生)
-(11, 2, 0.9, NOW(), NOW(), 0), -- 文艺演出
-(11, 1, 0.7, NOW(), NOW(), 0), -- 学术讲座
-(11, 4, 0.8, NOW(), NOW(), 0), -- 社会实践
-(11, 6, 0.6, NOW(), NOW(), 0), -- 交流参观
+INSERT IGNORE INTO UserActivityPreferences (UserId, CategoryId, Weight, CreatedAt, UpdatedAt, LastUpdated, IsDeleted) 
+SELECT u.Id, 2, 0.9, NOW(), NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'student005';
+
+INSERT IGNORE INTO UserActivityPreferences (UserId, CategoryId, Weight, CreatedAt, UpdatedAt, LastUpdated, IsDeleted) 
+SELECT u.Id, 1, 0.7, NOW(), NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'student005';
+
+INSERT IGNORE INTO UserActivityPreferences (UserId, CategoryId, Weight, CreatedAt, UpdatedAt, LastUpdated, IsDeleted) 
+SELECT u.Id, 4, 0.8, NOW(), NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'student005';
+
+INSERT IGNORE INTO UserActivityPreferences (UserId, CategoryId, Weight, CreatedAt, UpdatedAt, LastUpdated, IsDeleted) 
+SELECT u.Id, 6, 0.6, NOW(), NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'student005';
 
 -- 学生006的偏好 (新闻学学生)
-(12, 2, 0.8, NOW(), NOW(), 0), -- 文艺演出
-(12, 4, 0.9, NOW(), NOW(), 0), -- 社会实践
-(12, 6, 0.7, NOW(), NOW(), 0), -- 交流参观
-(12, 1, 0.6, NOW(), NOW(), 0), -- 学术讲座
+INSERT IGNORE INTO UserActivityPreferences (UserId, CategoryId, Weight, CreatedAt, UpdatedAt, LastUpdated, IsDeleted) 
+SELECT u.Id, 2, 0.8, NOW(), NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'student006';
+
+INSERT IGNORE INTO UserActivityPreferences (UserId, CategoryId, Weight, CreatedAt, UpdatedAt, LastUpdated, IsDeleted) 
+SELECT u.Id, 4, 0.9, NOW(), NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'student006';
+
+INSERT IGNORE INTO UserActivityPreferences (UserId, CategoryId, Weight, CreatedAt, UpdatedAt, LastUpdated, IsDeleted) 
+SELECT u.Id, 6, 0.7, NOW(), NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'student006';
+
+INSERT IGNORE INTO UserActivityPreferences (UserId, CategoryId, Weight, CreatedAt, UpdatedAt, LastUpdated, IsDeleted) 
+SELECT u.Id, 1, 0.6, NOW(), NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'student006';
 
 -- 学生007的偏好 (体育学生)
-(13, 3, 0.95, NOW(), NOW(), 0), -- 体育竞技
-(13, 4, 0.8, NOW(), NOW(), 0),  -- 社会实践
-(13, 2, 0.5, NOW(), NOW(), 0),  -- 文艺演出
-(13, 1, 0.4, NOW(), NOW(), 0),  -- 学术讲座
+INSERT IGNORE INTO UserActivityPreferences (UserId, CategoryId, Weight, CreatedAt, UpdatedAt, LastUpdated, IsDeleted) 
+SELECT u.Id, 3, 0.95, NOW(), NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'student007';
+
+INSERT IGNORE INTO UserActivityPreferences (UserId, CategoryId, Weight, CreatedAt, UpdatedAt, LastUpdated, IsDeleted) 
+SELECT u.Id, 4, 0.8, NOW(), NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'student007';
+
+INSERT IGNORE INTO UserActivityPreferences (UserId, CategoryId, Weight, CreatedAt, UpdatedAt, LastUpdated, IsDeleted) 
+SELECT u.Id, 2, 0.5, NOW(), NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'student007';
+
+INSERT IGNORE INTO UserActivityPreferences (UserId, CategoryId, Weight, CreatedAt, UpdatedAt, LastUpdated, IsDeleted) 
+SELECT u.Id, 1, 0.4, NOW(), NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'student007';
 
 -- 学生008的偏好 (体育学生)
-(14, 3, 0.9, NOW(), NOW(), 0),  -- 体育竞技
-(14, 4, 0.7, NOW(), NOW(), 0),  -- 社会实践
-(14, 2, 0.6, NOW(), NOW(), 0),  -- 文艺演出
-(14, 5, 0.5, NOW(), NOW(), 0),  -- 创新创业
+INSERT IGNORE INTO UserActivityPreferences (UserId, CategoryId, Weight, CreatedAt, UpdatedAt, LastUpdated, IsDeleted) 
+SELECT u.Id, 3, 0.9, NOW(), NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'student008';
+
+INSERT IGNORE INTO UserActivityPreferences (UserId, CategoryId, Weight, CreatedAt, UpdatedAt, LastUpdated, IsDeleted) 
+SELECT u.Id, 4, 0.7, NOW(), NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'student008';
+
+INSERT IGNORE INTO UserActivityPreferences (UserId, CategoryId, Weight, CreatedAt, UpdatedAt, LastUpdated, IsDeleted) 
+SELECT u.Id, 2, 0.6, NOW(), NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'student008';
+
+INSERT IGNORE INTO UserActivityPreferences (UserId, CategoryId, Weight, CreatedAt, UpdatedAt, LastUpdated, IsDeleted) 
+SELECT u.Id, 5, 0.5, NOW(), NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'student008';
 
 -- 学生009的偏好 (工程学生)
-(15, 1, 0.8, NOW(), NOW(), 0),  -- 学术讲座
-(15, 5, 0.85, NOW(), NOW(), 0), -- 创新创业
-(15, 6, 0.7, NOW(), NOW(), 0),  -- 交流参观
-(15, 3, 0.6, NOW(), NOW(), 0),  -- 体育竞技
+INSERT IGNORE INTO UserActivityPreferences (UserId, CategoryId, Weight, CreatedAt, UpdatedAt, LastUpdated, IsDeleted) 
+SELECT u.Id, 1, 0.8, NOW(), NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'student009';
+
+INSERT IGNORE INTO UserActivityPreferences (UserId, CategoryId, Weight, CreatedAt, UpdatedAt, LastUpdated, IsDeleted) 
+SELECT u.Id, 5, 0.85, NOW(), NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'student009';
+
+INSERT IGNORE INTO UserActivityPreferences (UserId, CategoryId, Weight, CreatedAt, UpdatedAt, LastUpdated, IsDeleted) 
+SELECT u.Id, 6, 0.7, NOW(), NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'student009';
+
+INSERT IGNORE INTO UserActivityPreferences (UserId, CategoryId, Weight, CreatedAt, UpdatedAt, LastUpdated, IsDeleted) 
+SELECT u.Id, 3, 0.6, NOW(), NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'student009';
 
 -- 学生010的偏好 (工程学生)
-(16, 1, 0.9, NOW(), NOW(), 0),  -- 学术讲座
-(16, 5, 0.8, NOW(), NOW(), 0),  -- 创新创业
-(16, 3, 0.7, NOW(), NOW(), 0),  -- 体育竞技
-(16, 6, 0.6, NOW(), NOW(), 0);  -- 交流参观
+INSERT IGNORE INTO UserActivityPreferences (UserId, CategoryId, Weight, CreatedAt, UpdatedAt, LastUpdated, IsDeleted) 
+SELECT u.Id, 1, 0.9, NOW(), NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'student010';
+
+INSERT IGNORE INTO UserActivityPreferences (UserId, CategoryId, Weight, CreatedAt, UpdatedAt, LastUpdated, IsDeleted) 
+SELECT u.Id, 5, 0.8, NOW(), NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'student010';
+
+INSERT IGNORE INTO UserActivityPreferences (UserId, CategoryId, Weight, CreatedAt, UpdatedAt, LastUpdated, IsDeleted) 
+SELECT u.Id, 3, 0.7, NOW(), NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'student010';
+
+INSERT IGNORE INTO UserActivityPreferences (UserId, CategoryId, Weight, CreatedAt, UpdatedAt, LastUpdated, IsDeleted) 
+SELECT u.Id, 6, 0.6, NOW(), NOW(), NOW(), 0
+FROM Users u WHERE u.Username = 'student010';
 
 -- =================================
 -- 7. 更新活动当前参与人数
@@ -246,10 +508,21 @@ UPDATE Activities SET CurrentParticipants = (
 -- =================================
 -- 8. 添加一些历史活动数据 (已完成的活动)
 -- =================================
-INSERT INTO Activities (Title, Description, Location, StartTime, EndTime, RegistrationDeadline, MaxParticipants, CurrentParticipants, ImageUrl, Status, CategoryId, CreatedBy, UpdatedBy, CreatedAt, UpdatedAt, IsDeleted) VALUES
-('2023年度科技创新成果展', '展示本年度师生科技创新成果，促进学术交流。', '科技楼展厅', '2023-12-15 09:00:00', '2023-12-15 17:00:00', '2023-12-13 18:00:00', 200, 180, '/images/tech-expo-2023.jpg', 3, 5, 3, 3, '2023-12-01 10:00:00', '2023-12-16 10:00:00', 0),
-('迎新年文艺汇演', '各学院学生精彩演出，共庆新年。', '大礼堂', '2023-12-28 19:00:00', '2023-12-28 21:30:00', '2023-12-26 18:00:00', 800, 750, '/images/new-year-show.jpg', 3, 2, 5, 5, '2023-12-10 14:00:00', '2023-12-29 10:00:00', 0),
-('校园环保行动日', '全校师生参与的环保宣传和实践活动。', '全校区', '2023-11-20 08:00:00', '2023-11-20 17:00:00', '2023-11-18 20:00:00', 500, 420, '/images/eco-action.jpg', 3, 4, 4, 4, '2023-11-05 09:00:00', '2023-11-21 10:00:00', 0);
+
+-- 2023年度科技创新成果展
+INSERT INTO Activities (Title, Description, Location, StartTime, EndTime, RegistrationDeadline, MaxParticipants, CurrentParticipants, ImageUrl, Status, CategoryId, CreatedBy, UpdatedBy, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT '2023年度科技创新成果展', '展示本年度师生科技创新成果，促进学术交流。', '科技楼展厅', '2023-12-15 09:00:00', '2023-12-15 17:00:00', '2023-12-13 18:00:00', 200, 180, '/images/tech-expo-2023.jpg', 3, 5, u.Id, u.Id, '2023-12-01 10:00:00', '2023-12-16 10:00:00', 0
+FROM Users u WHERE u.Username = 'zhangsan';
+
+-- 迎新年文艺汇演
+INSERT INTO Activities (Title, Description, Location, StartTime, EndTime, RegistrationDeadline, MaxParticipants, CurrentParticipants, ImageUrl, Status, CategoryId, CreatedBy, UpdatedBy, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT '迎新年文艺汇演', '各学院学生精彩演出，共庆新年。', '大礼堂', '2023-12-28 19:00:00', '2023-12-28 21:30:00', '2023-12-26 18:00:00', 800, 750, '/images/new-year-show.jpg', 3, 2, u.Id, u.Id, '2023-12-10 14:00:00', '2023-12-29 10:00:00', 0
+FROM Users u WHERE u.Username = 'wangwu';
+
+-- 校园环保行动日
+INSERT INTO Activities (Title, Description, Location, StartTime, EndTime, RegistrationDeadline, MaxParticipants, CurrentParticipants, ImageUrl, Status, CategoryId, CreatedBy, UpdatedBy, CreatedAt, UpdatedAt, IsDeleted) 
+SELECT '校园环保行动日', '全校师生参与的环保宣传和实践活动。', '全校区', '2023-11-20 08:00:00', '2023-11-20 17:00:00', '2023-11-18 20:00:00', 500, 420, '/images/eco-action.jpg', 3, 4, u.Id, u.Id, '2023-11-05 09:00:00', '2023-11-21 10:00:00', 0
+FROM Users u WHERE u.Username = 'lisi';
 
 -- =================================
 -- 脚本执行完成提示

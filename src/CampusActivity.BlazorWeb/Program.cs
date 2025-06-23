@@ -30,6 +30,7 @@ builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthenticationStat
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IActivityService, ActivityService>();
 builder.Services.AddScoped<IRecommendationService, RecommendationService>();
+builder.Services.AddScoped<IScheduleService, ScheduleService>();
 
 // 配置授权
 builder.Services.AddAuthorizationCore();

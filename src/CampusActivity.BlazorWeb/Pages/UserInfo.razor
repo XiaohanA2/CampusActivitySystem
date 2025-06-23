@@ -1,0 +1,99 @@
+@page "/user-info"
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+
+<PageTitle>用户信息调试</PageTitle>
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4>当前用户信息</h4>
+                </div>
+                <div class="card-body">
+                    <AuthorizeView>
+                        <Authorized>
+                            <div class="mb-3">
+                                <h5>基本信息</h5>
+                                <table class="table table-bordered">
+                                    <tr>
+                                        <td><strong>用户名:</strong></td>
+                                        <td>@context.User.FindFirst(ClaimTypes.Name)?.Value</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>姓名:</strong></td>
+                                        <td>@context.User.FindFirst("FullName")?.Value</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>邮箱:</strong></td>
+                                        <td>@context.User.FindFirst(ClaimTypes.Email)?.Value</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>用户ID:</strong></td>
+                                        <td>@context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>角色:</strong></td>
+                                        <td>@context.User.FindFirst(ClaimTypes.Role)?.Value</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>认证类型:</strong></td>
+                                        <td>@context.User.Identity?.AuthenticationType</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>是否认证:</strong></td>
+                                        <td>@context.User.Identity?.IsAuthenticated</td>
+                                    </tr>
+                                </table>
+                            </div>
+
+                            <div class="mb-3">
+                                <h5>所有Claims</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>类型</th>
+                                                <th>值</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var claim in context.User.Claims)
+                                            {
+                                                <tr>
+                                                    <td>@claim.Type</td>
+                                                    <td>@claim.Value</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <h5>JWT Token信息</h5>
+                                <div class="alert alert-info">
+                                    <small>
+                                        Token包含以下信息：<br/>
+                                        • NameIdentifier: 用户ID<br/>
+                                        • Name: 用户名<br/>
+                                        • Email: 邮箱<br/>
+                                        • Role: 角色<br/>
+                                        • FullName: 姓名（自定义claim）
+                                    </small>
+                                </div>
+                            </div>
+                        </Authorized>
+                        <NotAuthorized>
+                            <div class="alert alert-warning">
+                                <h5>未登录</h5>
+                                <p>请先 <a href="/login">登录</a> 以查看用户信息。</p>
+                            </div>
+                        </NotAuthorized>
+                    </AuthorizeView>
+                </div>
+            </div>
+        </div>
+    </div>
+</div> 

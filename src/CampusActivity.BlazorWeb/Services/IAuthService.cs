@@ -10,4 +10,5 @@ public interface IAuthService
     Task<UserDto?> GetCurrentUserAsync();
     Task<bool> IsAuthenticatedAsync();
     Task<bool> ChangePasswordAsync(string currentPassword, string newPassword);
+    Task<string?> GetTokenAsync();
 } 

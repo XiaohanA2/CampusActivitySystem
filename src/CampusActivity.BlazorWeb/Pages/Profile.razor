@@ -1,0 +1,147 @@
+@page "/profile"
+@using CampusActivity.Shared.DTOs
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>个人资料</PageTitle>
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4>个人资料</h4>
+                </div>
+                <div class="card-body">
+                    @if (currentUser != null)
+                    {
+                        <EditForm Model="currentUser" OnValidSubmit="HandleUpdateProfile">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary />
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">用户名</label>
+                                    <input type="text" class="form-control" value="@currentUser.Username" readonly />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">角色</label>
+                                    <input type="text" class="form-control" value="@GetRoleDisplayName(currentUser.Role)" readonly />
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">姓名</label>
+                                    <InputText class="form-control" @bind-Value="currentUser.FullName" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">邮箱</label>
+                                    <InputText class="form-control" @bind-Value="currentUser.Email" />
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">手机号</label>
+                                <InputText class="form-control" @bind-Value="currentUser.Phone" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">注册时间</label>
+                                <input type="text" class="form-control" value="@currentUser.CreatedAt.ToString("yyyy-MM-dd HH:mm")" readonly />
+                            </div>
+
+                            <div class="d-flex justify-content-between">
+                                <button type="submit" class="btn btn-primary" disabled="@isLoading">
+                                    @if (isLoading)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2"></span>
+                                    }
+                                    保存修改
+                                </button>
+                                <a href="/" class="btn btn-secondary">返回首页</a>
+                            </div>
+                        </EditForm>
+
+                        @if (!string.IsNullOrEmpty(message))
+                        {
+                            <div class="alert @(isSuccess ? "alert-success" : "alert-danger") mt-3">
+                                @message
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="text-center">
+                            <p>正在加载用户信息...</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private UserDto? currentUser;
+    private string message = string.Empty;
+    private bool isSuccess = false;
+    private bool isLoading = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUserProfile();
+    }
+
+    private async Task LoadUserProfile()
+    {
+        try
+        {
+            currentUser = await AuthService.GetCurrentUserAsync();
+            if (currentUser == null)
+            {
+                Navigation.NavigateTo("/login");
+            }
+        }
+        catch (Exception ex)
+        {
+            message = $"加载用户信息失败: {ex.Message}";
+            isSuccess = false;
+        }
+    }
+
+    private async Task HandleUpdateProfile()
+    {
+        if (currentUser == null) return;
+
+        isLoading = true;
+        message = string.Empty;
+
+        try
+        {
+            // 这里需要调用后端API更新用户资料
+            // 由于AuthService可能没有UpdateProfile方法，我们可以直接调用API
+            // 或者扩展AuthService添加更新方法
+            
+            message = "个人资料更新功能正在开发中...";
+            isSuccess = true;
+        }
+        catch (Exception ex)
+        {
+            message = $"更新失败: {ex.Message}";
+            isSuccess = false;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private string GetRoleDisplayName(UserRole role) => role switch
+    {
+        UserRole.Student => "学生",
+        UserRole.Teacher => "教师",
+        UserRole.Admin => "管理员",
+        _ => "未知"
+    };
+} 
