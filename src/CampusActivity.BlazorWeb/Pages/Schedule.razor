@@ -410,39 +410,69 @@
 
     private async Task SaveItem()
     {
-        if (editingItem == null)
+        try
         {
-            var result = await ScheduleService.CreateScheduleItemAsync(currentItem);
-            if (result != null)
+            Console.WriteLine("开始保存日程项...");
+            Console.WriteLine($"标题: {currentItem.Title}");
+            Console.WriteLine($"开始时间: {currentItem.StartTime}");
+            Console.WriteLine($"结束时间: {currentItem.EndTime}");
+            
+            if (editingItem == null)
             {
-                CloseModal();
-                await LoadData();
+                Console.WriteLine("创建新日程项...");
+                var result = await ScheduleService.CreateScheduleItemAsync(currentItem);
+                if (result != null)
+                {
+                    Console.WriteLine($"日程项创建成功，ID: {result.Id}");
+                    await JSRuntime.InvokeVoidAsync("alert", "日程创建成功！");
+                    CloseModal();
+                    await LoadData();
+                }
+                else
+                {
+                    Console.WriteLine("日程项创建失败，返回null");
+                    await JSRuntime.InvokeVoidAsync("alert", "日程创建失败，请检查网络连接或联系管理员。");
+                }
+            }
+            else
+            {
+                Console.WriteLine($"更新日程项，ID: {editingItem.Id}");
+                var updateDto = new UpdateScheduleItemDto
+                {
+                    Id = editingItem.Id,
+                    Title = currentItem.Title,
+                    Description = currentItem.Description,
+                    Location = currentItem.Location,
+                    StartTime = currentItem.StartTime,
+                    EndTime = currentItem.EndTime,
+                    Type = currentItem.Type,
+                    Priority = currentItem.Priority,
+                    Color = currentItem.Color,
+                    Note = currentItem.Note,
+                    ActivityId = currentItem.ActivityId,
+                    IsCompleted = editingItem.IsCompleted
+                };
+                
+                var result = await ScheduleService.UpdateScheduleItemAsync(editingItem.Id, updateDto);
+                if (result != null)
+                {
+                    Console.WriteLine($"日程项更新成功，ID: {result.Id}");
+                    await JSRuntime.InvokeVoidAsync("alert", "日程更新成功！");
+                    CloseModal();
+                    await LoadData();
+                }
+                else
+                {
+                    Console.WriteLine("日程项更新失败，返回null");
+                    await JSRuntime.InvokeVoidAsync("alert", "日程更新失败，请检查网络连接或联系管理员。");
+                }
             }
         }
-        else
+        catch (Exception ex)
         {
-            var updateDto = new UpdateScheduleItemDto
-            {
-                Id = editingItem.Id,
-                Title = currentItem.Title,
-                Description = currentItem.Description,
-                Location = currentItem.Location,
-                StartTime = currentItem.StartTime,
-                EndTime = currentItem.EndTime,
-                Type = currentItem.Type,
-                Priority = currentItem.Priority,
-                Color = currentItem.Color,
-                Note = currentItem.Note,
-                ActivityId = currentItem.ActivityId,
-                IsCompleted = editingItem.IsCompleted
-            };
-            
-            var result = await ScheduleService.UpdateScheduleItemAsync(editingItem.Id, updateDto);
-            if (result != null)
-            {
-                CloseModal();
-                await LoadData();
-            }
+            Console.WriteLine($"保存日程项时发生异常: {ex.Message}");
+            Console.WriteLine($"异常堆栈: {ex.StackTrace}");
+            await JSRuntime.InvokeVoidAsync("alert", $"保存失败: {ex.Message}");
         }
     }
 

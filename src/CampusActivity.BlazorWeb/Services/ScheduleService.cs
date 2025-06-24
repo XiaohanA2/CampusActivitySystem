@@ -10,9 +10,9 @@ public class ScheduleService : IScheduleService
     private readonly IAuthService _authService;
     private readonly JsonSerializerOptions _jsonOptions;
 
-    public ScheduleService(HttpClient httpClient, IAuthService authService)
+    public ScheduleService(IHttpClientFactory httpClientFactory, IAuthService authService)
     {
-        _httpClient = httpClient;
+        _httpClient = httpClientFactory.CreateClient("CampusActivityAPI");
         _authService = authService;
         _jsonOptions = new JsonSerializerOptions
         {
@@ -33,21 +33,34 @@ public class ScheduleService : IScheduleService
     {
         try
         {
+            Console.WriteLine("ScheduleService: 开始创建日程项...");
+            Console.WriteLine($"ScheduleService: 请求URL: {_httpClient.BaseAddress}api/schedule");
+            
             await SetAuthorizationHeader();
             var json = JsonSerializer.Serialize(createDto, _jsonOptions);
+            Console.WriteLine($"ScheduleService: 请求数据: {json}");
+            
             var content = new StringContent(json, Encoding.UTF8, "application/json");
             
             var response = await _httpClient.PostAsync("api/schedule", content);
+            Console.WriteLine($"ScheduleService: 响应状态码: {response.StatusCode}");
             
             if (response.IsSuccessStatusCode)
             {
                 var responseContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"ScheduleService: 响应内容: {responseContent}");
                 return JsonSerializer.Deserialize<ScheduleItemDto>(responseContent, _jsonOptions);
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"ScheduleService: 错误响应: {errorContent}");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Create schedule item error: {ex.Message}");
+            Console.WriteLine($"ScheduleService: 创建日程项异常: {ex.Message}");
+            Console.WriteLine($"ScheduleService: 异常堆栈: {ex.StackTrace}");
         }
         
         return null;

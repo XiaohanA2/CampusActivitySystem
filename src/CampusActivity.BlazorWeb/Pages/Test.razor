@@ -1,37 +1,196 @@
 @page "/test"
-@using Microsoft.AspNetCore.Authorization
-@attribute [Authorize]
+@using CampusActivity.Shared.DTOs
+@using CampusActivity.Shared.Enums
+@inject IScheduleService ScheduleService
+@inject IAuthService AuthService
+@inject IJSRuntime JSRuntime
 
-<PageTitle>认证测试页面</PageTitle>
+<PageTitle>API测试</PageTitle>
 
-<h3>认证测试页面</h3>
-
-<AuthorizeView>
-    <Authorized Context="authContext">
-        <div class="alert alert-success">
-            <h4>认证成功！</h4>
-            <p>用户名: @authContext.User.Identity?.Name</p>
-            <p>认证类型: @authContext.User.Identity?.AuthenticationType</p>
-            <p>是否已认证: @authContext.User.Identity?.IsAuthenticated</p>
-            
-            <h5>用户声明:</h5>
-            <ul>
-                @foreach (var claim in authContext.User.Claims)
-                {
-                    <li><strong>@claim.Type:</strong> @claim.Value</li>
-                }
-            </ul>
+<div class="container mt-4">
+    <h3>API连接测试</h3>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>认证状态</h5>
+                </div>
+                <div class="card-body">
+                    <p>认证状态: @(isAuthenticated ? "已登录" : "未登录")</p>
+                    <p>当前用户: @(currentUser?.FullName ?? "未知")</p>
+                    <p>用户ID: @(currentUser?.Id ?? 0)</p>
+                    <p>Token: @(token?.Substring(0, Math.Min(50, token?.Length ?? 0)) ?? "无")...</p>
+                </div>
+            </div>
         </div>
-    </Authorized>
-    <NotAuthorized>
-        <div class="alert alert-warning">
-            <h4>未认证</h4>
-            <p>您需要先登录才能访问此页面。</p>
-            <a href="/login" class="btn btn-primary">去登录</a>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>API测试</h5>
+                </div>
+                <div class="card-body">
+                    <button class="btn btn-primary mb-2" @onclick="TestGetScheduleItems">
+                        测试获取日程列表
+                    </button>
+                    <br />
+                    <button class="btn btn-success mb-2" @onclick="TestCreateScheduleItem">
+                        测试创建日程
+                    </button>
+                    <br />
+                    <button class="btn btn-info" @onclick="TestGetStatistics">
+                        测试获取统计
+                    </button>
+                </div>
+            </div>
         </div>
-    </NotAuthorized>
-</AuthorizeView>
+    </div>
+    
+    @if (!string.IsNullOrEmpty(testResult))
+    {
+        <div class="row mt-3">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>测试结果</h5>
+                    </div>
+                    <div class="card-body">
+                        <pre>@testResult</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
 
 @code {
+    private bool isAuthenticated = false;
+    private UserDto? currentUser;
+    private string? token;
+    private string testResult = "";
 
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAuthInfo();
+    }
+
+    private async Task LoadAuthInfo()
+    {
+        isAuthenticated = await AuthService.IsAuthenticatedAsync();
+        if (isAuthenticated)
+        {
+            currentUser = await AuthService.GetCurrentUserAsync();
+            token = await AuthService.GetTokenAsync();
+        }
+    }
+
+    private async Task TestGetScheduleItems()
+    {
+        try
+        {
+            testResult = "正在测试获取日程列表...\n";
+            StateHasChanged();
+            
+            var searchDto = new ScheduleSearchDto { PageIndex = 1, PageSize = 10 };
+            var result = await ScheduleService.GetScheduleItemsAsync(searchDto);
+            
+            if (result != null)
+            {
+                testResult += $"成功获取日程列表，共 {result.TotalCount} 项\n";
+                testResult += $"当前页: {result.PageIndex}, 页大小: {result.PageSize}\n";
+                if (result.Items?.Any() == true)
+                {
+                    testResult += "日程项:\n";
+                    foreach (var item in result.Items.Take(3))
+                    {
+                        testResult += $"- {item.Title} ({item.StartTime:yyyy-MM-dd HH:mm})\n";
+                    }
+                }
+            }
+            else
+            {
+                testResult += "获取日程列表失败，返回null\n";
+            }
+        }
+        catch (Exception ex)
+        {
+            testResult += $"测试失败: {ex.Message}\n";
+            testResult += $"堆栈: {ex.StackTrace}\n";
+        }
+        
+        StateHasChanged();
+    }
+
+    private async Task TestCreateScheduleItem()
+    {
+        try
+        {
+            testResult = "正在测试创建日程...\n";
+            StateHasChanged();
+            
+            var createDto = new CreateScheduleItemDto
+            {
+                Title = "测试日程 " + DateTime.Now.ToString("HH:mm:ss"),
+                Description = "这是一个测试日程",
+                StartTime = DateTime.Now.AddHours(1),
+                EndTime = DateTime.Now.AddHours(2),
+                Type = ScheduleItemType.Personal,
+                Priority = ScheduleItemPriority.Medium
+            };
+            
+            var result = await ScheduleService.CreateScheduleItemAsync(createDto);
+            
+            if (result != null)
+            {
+                testResult += $"成功创建日程，ID: {result.Id}\n";
+                testResult += $"标题: {result.Title}\n";
+                testResult += $"开始时间: {result.StartTime}\n";
+                testResult += $"结束时间: {result.EndTime}\n";
+            }
+            else
+            {
+                testResult += "创建日程失败，返回null\n";
+            }
+        }
+        catch (Exception ex)
+        {
+            testResult += $"测试失败: {ex.Message}\n";
+            testResult += $"堆栈: {ex.StackTrace}\n";
+        }
+        
+        StateHasChanged();
+    }
+
+    private async Task TestGetStatistics()
+    {
+        try
+        {
+            testResult = "正在测试获取统计...\n";
+            StateHasChanged();
+            
+            var result = await ScheduleService.GetStatisticsAsync();
+            
+            if (result != null)
+            {
+                testResult += $"成功获取统计信息\n";
+                testResult += $"总日程数: {result.TotalItems}\n";
+                testResult += $"已完成: {result.CompletedItems}\n";
+                testResult += $"待完成: {result.PendingItems}\n";
+                testResult += $"已逾期: {result.OverdueItems}\n";
+                testResult += $"完成率: {result.CompletionRate:F1}%\n";
+            }
+            else
+            {
+                testResult += "获取统计失败，返回null\n";
+            }
+        }
+        catch (Exception ex)
+        {
+            testResult += $"测试失败: {ex.Message}\n";
+            testResult += $"堆栈: {ex.StackTrace}\n";
+        }
+        
+        StateHasChanged();
+    }
 } 

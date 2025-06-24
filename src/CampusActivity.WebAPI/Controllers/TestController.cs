@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using CampusActivity.Infrastructure.Data;
 using CampusActivity.Shared.DTOs;
+using BCrypt.Net;
 
 namespace CampusActivity.WebAPI.Controllers;
 
@@ -186,6 +187,59 @@ public class TestController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "获取数据库状态失败");
+            return StatusCode(500, new
+            {
+                Status = "Error",
+                Message = ex.Message,
+                Timestamp = DateTime.Now
+            });
+        }
+    }
+
+    [HttpGet("test-login")]
+    public async Task<ActionResult<object>> TestLogin()
+    {
+        try
+        {
+            // 测试admin用户登录
+            var adminUser = await _context.Users.FirstOrDefaultAsync(u => u.Username == "admin");
+            
+            if (adminUser == null)
+            {
+                return Ok(new
+                {
+                    Status = "Error",
+                    Message = "admin用户不存在",
+                    Timestamp = DateTime.Now
+                });
+            }
+
+            // 测试密码验证
+            var testPassword = "admin123";
+            var isValidPassword = BCrypt.Net.BCrypt.Verify(testPassword, adminUser.PasswordHash);
+
+            return Ok(new
+            {
+                Status = "Success",
+                User = new
+                {
+                    Id = adminUser.Id,
+                    Username = adminUser.Username,
+                    FullName = adminUser.FullName,
+                    Role = adminUser.Role.ToString(),
+                    IsActive = adminUser.IsActive
+                },
+                PasswordTest = new
+                {
+                    TestPassword = testPassword,
+                    IsValid = isValidPassword
+                },
+                Timestamp = DateTime.Now
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "测试登录失败");
             return StatusCode(500, new
             {
                 Status = "Error",

@@ -141,6 +141,15 @@
                 </div>
                 <div class="card-body">
                     <div class="d-grid gap-2">
+                        <button class="btn btn-outline-primary" @onclick="TestLogin" disabled="@isTesting">
+                            测试登录
+                        </button>
+                        <button class="btn btn-outline-primary" @onclick="TestAuthentication" disabled="@isTesting">
+                            认证状态测试
+                        </button>
+                        <button class="btn btn-outline-primary" @onclick="TestLocalStorageToken" disabled="@isTesting">
+                            测试LocalStorage
+                        </button>
                         <button class="btn btn-outline-primary" @onclick="TestGetUserProfile" disabled="@(!isAuthenticated || isTesting)">
                             获取用户资料
                         </button>
@@ -273,8 +282,8 @@
     private List<TestLog> testLogs = new();
     private bool isAuthenticated = false;
     private bool isTesting = false;
-    private string testUsername = "admin";
-    private string testPassword = "admin123";
+    private string testUsername = "yyk";
+    private string testPassword = "040228";
     private int? createdScheduleId = null;
     private int? createdActivityId = null;
 
@@ -301,20 +310,28 @@
                 Password = testPassword
             };
             
+            AddLog($"尝试登录用户: {testUsername}", LogType.Info);
+            
             var result = await AuthService.LoginAsync(loginDto);
             if (result != null)
             {
                 isAuthenticated = true;
-                AddLog($"登录成功！用户: {result.User.FullName} ({result.User.Role})", LogType.Success);
+                AddLog($"✅ 登录成功！用户: {result.User.FullName} ({result.User.Role})", LogType.Success);
+                AddLog($"Token: {result.Token.Substring(0, Math.Min(50, result.Token.Length))}...", LogType.Info);
+                
+                // 解析新生成的token
+                await DecodeJwtToken(result.Token);
             }
             else
             {
-                AddLog("登录失败：用户名或密码错误", LogType.Error);
+                AddLog("❌ 登录失败：用户名或密码错误", LogType.Error);
+                isAuthenticated = false;
             }
         }
         catch (Exception ex)
         {
-            AddLog($"登录测试失败: {ex.Message}", LogType.Error);
+            AddLog($"❌ 登录测试失败: {ex.Message}", LogType.Error);
+            isAuthenticated = false;
         }
     }
 
@@ -497,13 +514,7 @@
         {
             var client = HttpClientFactory.CreateClient("CampusActivityAPI");
             
-            // 如果是需要认证的API，设置认证头
-            if (endpoint.StartsWith("api/auth/") || endpoint.StartsWith("api/activities/") || 
-                endpoint.StartsWith("api/schedule/") || endpoint.StartsWith("api/recommendations/"))
-            {
-                await SetAuthHeader(client);
-            }
-            
+            // 直接调用TestApiEndpoint，让它统一处理认证头设置
             await TestApiEndpoint(client, method, endpoint, description, data);
         }
         finally
@@ -740,11 +751,145 @@
         await TestSingleApi("POST", "api/recommendations/recalculate", "重新计算推荐");
     }
 
+    // 认证相关测试方法
+    private async Task TestAuthentication()
+    {
+        AddLog("=== 测试认证状态 ===", LogType.Info);
+        
+        try
+        {
+            // 检查认证状态
+            var authStatus = await AuthService.IsAuthenticatedAsync();
+            AddLog($"认证状态: {(authStatus ? "已认证" : "未认证")}", LogType.Info);
+            
+            // 获取token
+            var token = await AuthService.GetTokenAsync();
+            if (!string.IsNullOrEmpty(token))
+            {
+                AddLog($"Token存在: {token.Substring(0, Math.Min(50, token.Length))}...", LogType.Success);
+                AddLog($"Token完整长度: {token.Length}", LogType.Info);
+                
+                // 解析JWT token
+                await DecodeJwtToken(token);
+                
+                // 测试token有效性
+                var client = HttpClientFactory.CreateClient("CampusActivityAPI");
+                client.DefaultRequestHeaders.Authorization = 
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                
+                var response = await client.GetAsync("api/auth/profile");
+                if (response.IsSuccessStatusCode)
+                {
+                    AddLog("✅ Token有效，可以访问认证API", LogType.Success);
+                    isAuthenticated = true;
+                }
+                else
+                {
+                    var responseContent = await response.Content.ReadAsStringAsync();
+                    AddLog($"❌ Token无效，状态码: {(int)response.StatusCode}, 响应: {responseContent}", LogType.Error);
+                    isAuthenticated = false;
+                }
+            }
+            else
+            {
+                AddLog("❌ 未找到Token", LogType.Error);
+                isAuthenticated = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            AddLog($"认证测试失败: {ex.Message}", LogType.Error);
+        }
+    }
+
+    private async Task DecodeJwtToken(string token)
+    {
+        try
+        {
+            var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
+            var jsonToken = handler.ReadJwtToken(token);
+            
+            AddLog("=== JWT Token 解析 ===", LogType.Info);
+            AddLog($"Token类型: {jsonToken.Header.Typ}", LogType.Info);
+            AddLog($"算法: {jsonToken.Header.Alg}", LogType.Info);
+            AddLog($"过期时间: {jsonToken.ValidTo}", LogType.Info);
+            
+            AddLog("Claims:", LogType.Info);
+            foreach (var claim in jsonToken.Claims)
+            {
+                AddLog($"  {claim.Type}: {claim.Value}", LogType.Info);
+            }
+        }
+        catch (Exception ex)
+        {
+            AddLog($"❌ JWT Token解析失败: {ex.Message}", LogType.Error);
+        }
+    }
+
+    private async Task TestLocalStorageToken()
+    {
+        AddLog("=== 测试LocalStorage中的Token ===", LogType.Info);
+        
+        try
+        {
+            // 使用AuthService来获取token
+            var token = await AuthService.GetTokenAsync();
+            
+            if (!string.IsNullOrEmpty(token))
+            {
+                AddLog($"✅ LocalStorage中找到Token: {token.Substring(0, Math.Min(50, token.Length))}...", LogType.Success);
+                AddLog($"Token长度: {token.Length}", LogType.Info);
+                
+                // 验证token格式
+                if (token.Contains(".") && token.Split('.').Length == 3)
+                {
+                    AddLog("✅ Token格式正确 (JWT格式)", LogType.Success);
+                }
+                else
+                {
+                    AddLog("❌ Token格式不正确", LogType.Error);
+                }
+            }
+            else
+            {
+                AddLog("❌ LocalStorage中未找到Token", LogType.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            AddLog($"❌ 访问LocalStorage失败: {ex.Message}", LogType.Error);
+        }
+    }
+
     private async Task TestApiEndpoint(HttpClient client, string method, string endpoint, string description, object? data = null)
     {
         try
         {
             AddLog($"测试 {method} {endpoint} - {description}", LogType.Info);
+            AddLog($"HTTP客户端BaseAddress: {client.BaseAddress}", LogType.Info);
+            
+            // 对于需要认证的API，尝试设置认证头
+            if (endpoint.StartsWith("api/auth/") || endpoint.StartsWith("api/activities/") || 
+                endpoint.StartsWith("api/schedule") || endpoint.StartsWith("api/recommendations/"))
+            {
+                AddLog("检测到需要认证的API，开始设置认证头...", LogType.Info);
+                await SetAuthHeader(client);
+                
+                // 验证认证头是否设置成功
+                var authHeader = client.DefaultRequestHeaders.Authorization;
+                if (authHeader != null)
+                {
+                    AddLog($"✅ 认证头已设置: {authHeader.Scheme} {authHeader.Parameter?.Substring(0, Math.Min(50, authHeader.Parameter.Length))}...", LogType.Success);
+                }
+                else
+                {
+                    AddLog("❌ 认证头未设置", LogType.Error);
+                }
+            }
+            else
+            {
+                AddLog("此API不需要认证", LogType.Info);
+            }
             
             HttpResponseMessage response;
             string requestBody = "";
@@ -803,6 +948,12 @@
             else
             {
                 AddLog($"❌ {description} 失败 ({(int)statusCode}): {responseContent}", LogType.Error);
+                
+                // 如果是401错误，提示用户重新登录
+                if (statusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    AddLog("提示: 请先登录或重新登录", LogType.Warning);
+                }
             }
         }
         catch (Exception ex)
@@ -815,21 +966,34 @@
     {
         try
         {
+            AddLog("开始设置认证头...", LogType.Info);
+            
             var token = await AuthService.GetTokenAsync();
+            AddLog($"从AuthService获取到Token: {(string.IsNullOrEmpty(token) ? "null" : "not null")}", LogType.Info);
+            
             if (!string.IsNullOrEmpty(token))
             {
+                AddLog($"Token长度: {token.Length}", LogType.Info);
+                
+                // 清除之前的认证头
+                client.DefaultRequestHeaders.Remove("Authorization");
+                AddLog("已清除之前的认证头", LogType.Info);
+                
+                // 设置新的认证头
                 client.DefaultRequestHeaders.Authorization = 
                     new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-                AddLog("认证头设置成功", LogType.Success);
+                AddLog($"✅ 认证头设置成功 (Token长度: {token.Length})", LogType.Success);
+                AddLog($"Token前50字符: {token.Substring(0, Math.Min(50, token.Length))}...", LogType.Info);
             }
             else
             {
-                AddLog("未找到认证token", LogType.Warning);
+                AddLog("❌ 未找到认证token，请先登录", LogType.Warning);
             }
         }
         catch (Exception ex)
         {
-            AddLog($"设置认证头失败: {ex.Message}", LogType.Warning);
+            AddLog($"❌ 设置认证头失败: {ex.Message}", LogType.Warning);
+            AddLog($"异常堆栈: {ex.StackTrace}", LogType.Error);
         }
     }
 
