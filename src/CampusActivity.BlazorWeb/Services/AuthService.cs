@@ -154,4 +154,27 @@ public class AuthService : IAuthService
             return null;
         }
     }
+
+    public async Task<bool> UpdateProfileAsync(UserDto userDto)
+    {
+        try
+        {
+            var json = JsonSerializer.Serialize(userDto, _jsonOptions);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            var response = await _httpClient.PutAsync("api/auth/profile", content);
+            if (response.IsSuccessStatusCode)
+            {
+                // 更新本地存储的用户信息
+                await _localStorage.SetItemAsync("user", userDto);
+                return true;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Update profile error: {ex.Message}");
+        }
+
+        return false;
+    }
 } 

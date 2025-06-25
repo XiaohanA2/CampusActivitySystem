@@ -1,0 +1,416 @@
+@page "/chat"
+@using CampusActivity.Shared.DTOs
+@inject IAuthService AuthService
+@inject IChatService ChatService
+@inject IJSRuntime JSRuntime
+
+<PageTitle>AI助手 - 校园活动系统</PageTitle>
+
+<div class="container-fluid h-100">
+    <div class="row h-100">
+        <!-- 聊天主界面 -->
+        <div class="col-12 d-flex flex-column h-100">
+            <!-- 聊天头部 -->
+            <div class="chat-header bg-primary text-white p-3">
+                <div class="d-flex align-items-center">
+                    <div class="me-3">
+                        <i class="oi oi-chat" style="font-size: 1.5rem;"></i>
+                    </div>
+                    <div>
+                        <h4 class="mb-0">AI助手</h4>
+                        <small>智能校园活动助手，为您提供个性化活动推荐和帮助</small>
+                    </div>
+                    <div class="ms-auto d-flex gap-2">
+                        <button class="btn btn-outline-light btn-sm" @onclick="ClearChat" title="清空对话">
+                            <i class="oi oi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 聊天消息区域 -->
+            <div class="chat-messages flex-grow-1 p-3" @ref="messagesContainer">
+                @if (messages.Count == 0)
+                {
+                    <div class="text-center text-muted mt-5">
+                        <div class="ai-avatar-large mb-3">
+                            <i class="oi oi-cog"></i>
+                        </div>
+                        <h5 class="mt-3">欢迎使用AI助手</h5>
+                        <p class="text-muted">我可以帮您了解校园活动、推荐适合的活动、解答报名问题等</p>
+                        
+                        @if (currentUser != null)
+                        {
+                            <div class="alert alert-info mt-3">
+                                <i class="oi oi-person me-2"></i>
+                                已识别您的身份：@currentUser.FullName，将为您提供个性化服务
+                            </div>
+                             <div>当前用户ID：@currentUser.Id，姓名：@currentUser.FullName</div>
+                        }
+                        else
+                        {
+                            <div class="text-danger">未获取到当前用户信息</div>
+                        }
+                        
+                        <!-- 快速问题按钮 -->
+                        <div class="row justify-content-center mt-4">
+                            <div class="col-lg-8">
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <button class="btn btn-outline-primary w-100 quick-question-btn" @onclick='() => SendQuickMessage("推荐一些适合我的活动")'>
+                                            <i class="oi oi-star me-2"></i>推荐活动
+                                        </button>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <button class="btn btn-outline-primary w-100 quick-question-btn" @onclick='() => SendQuickMessage("如何报名参加活动？")'>
+                                            <i class="oi oi-question-mark me-2"></i>报名帮助
+                                        </button>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <button class="btn btn-outline-primary w-100 quick-question-btn" @onclick='() => SendQuickMessage("最近有什么热门活动？")'>
+                                            <i class="oi oi-fire me-2"></i>热门活动
+                                        </button>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <button class="btn btn-outline-primary w-100 quick-question-btn" @onclick='() => SendQuickMessage("如何管理我的日程安排？")'>
+                                            <i class="oi oi-calendar me-2"></i>日程管理
+                                        </button>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <button class="btn btn-outline-primary w-100 quick-question-btn" @onclick='() => SendQuickMessage("查看我报名的活动")'>
+                                            <i class="oi oi-list me-2"></i>我的活动
+                                        </button>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <button class="btn btn-outline-primary w-100 quick-question-btn" @onclick='() => SendQuickMessage("我的日程安排怎么样？")'>
+                                            <i class="oi oi-graph me-2"></i>日程分析
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 功能提示 -->
+                        <div class="mt-4 p-3 bg-light rounded">
+                            <h6><i class="oi oi-lightbulb me-2"></i>使用提示</h6>
+                            <ul class="list-unstyled mb-0 small">
+                                <li><i class="oi oi-check text-success me-2"></i>支持自然语言对话</li>
+                                <li><i class="oi oi-check text-success me-2"></i>可询问活动详情、报名流程</li>
+                                <li><i class="oi oi-check text-success me-2"></i>提供个性化活动推荐</li>
+                                <li><i class="oi oi-check text-success me-2"></i>帮助管理个人日程</li>
+                                <li><i class="oi oi-check text-success me-2"></i>基于您的数据提供个性化建议</li>
+                            </ul>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    @foreach (var message in messages)
+                    {
+                        <div class="message @(message.IsUser ? "user-message" : "ai-message") mb-3">
+                            <div class="message-content">
+                                @if (message.IsUser)
+                                {
+                                    <div class="d-flex justify-content-end">
+                                        <div class="message-bubble user-bubble">
+                                            <div class="message-text">@message.Content</div>
+                                            <div class="message-time">@message.Timestamp.ToString("HH:mm")</div>
+                                        </div>
+                                        <div class="message-avatar ms-2">
+                                            <i class="oi oi-person"></i>
+                                        </div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="d-flex justify-content-start">
+                                        <div class="message-avatar me-2">
+                                            <i class="oi oi-cog"></i>
+                                        </div>
+                                        <div class="message-bubble ai-bubble">
+                                            <div class="message-text">@message.Content</div>
+                                            <div class="message-time">@message.Timestamp.ToString("HH:mm")</div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                }
+
+                @if (isLoading)
+                {
+                    <div class="message ai-message mb-3">
+                        <div class="message-content">
+                            <div class="d-flex justify-content-start">
+                                <div class="message-avatar me-2">
+                                    <i class="oi oi-cog"></i>
+                                </div>
+                                <div class="message-bubble ai-bubble">
+                                    <div class="typing-indicator">
+                                        <span></span>
+                                        <span></span>
+                                        <span></span>
+                                    </div>
+                                    <div class="text-muted small mt-2">AI正在思考中...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- 聊天输入区域 -->
+            <div class="chat-input p-3 border-top bg-white">
+                <div class="input-group">
+                    <textarea 
+                        class="form-control" 
+                        placeholder="输入您的问题，按Enter发送，Shift+Enter换行..." 
+                        @bind="inputMessage" 
+                        @bind:event="oninput"
+                        @onkeydown="HandleKeyDown"
+                        rows="1"
+                        style="resize: none; border-radius: 20px 0 0 20px;"
+                        disabled="@isLoading">
+                    </textarea>
+                    <button 
+                        class="btn btn-primary" 
+                        @onclick="SendMessage" 
+                        disabled="@(string.IsNullOrWhiteSpace(inputMessage) || isLoading)"
+                        style="border-radius: 0 20px 20px 0;">
+                        <i class="oi @(isLoading ? "oi-loop-circular" : "oi-arrow-top")"></i>
+                    </button>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-2">
+                    <small class="text-muted">
+                        @if (messages.Count > 0)
+                        {
+                            <span>共 @messages.Count 条消息</span>
+                        }
+                    </small>
+                    <small class="text-muted">
+                        <i class="oi oi-info"></i> AI助手会记住对话上下文并基于您的数据提供个性化建议
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .chat-messages {
+        overflow-y: auto;
+        background-color: #f8f9fa;
+        min-height: 400px;
+        scroll-behavior: smooth;
+    }
+
+    .message-bubble {
+        max-width: 70%;
+        padding: 12px 16px;
+        border-radius: 18px;
+        position: relative;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .user-bubble {
+        background: linear-gradient(135deg, #007bff, #0056b3);
+        color: white;
+        border-bottom-right-radius: 4px;
+    }
+
+    .ai-bubble {
+        background-color: white;
+        color: #333;
+        border: 1px solid #e9ecef;
+        border-bottom-left-radius: 4px;
+    }
+
+    .message-time {
+        font-size: 0.75rem;
+        opacity: 0.7;
+        margin-top: 4px;
+    }
+
+    .message-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #e9ecef;
+        color: #6c757d;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .ai-avatar-large {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #007bff, #0056b3);
+        color: white;
+        margin: 0 auto;
+        font-size: 2rem;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    .typing-indicator {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .typing-indicator span {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: #6c757d;
+        animation: typing 1.4s infinite ease-in-out;
+    }
+
+    .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+    .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+
+    @@keyframes typing {
+        0%, 80%, 100% {
+            transform: scale(0.8);
+            opacity: 0.5;
+        }
+        40% {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+
+    .chat-header {
+        border-bottom: 1px solid rgba(255,255,255,0.2);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .quick-question-btn {
+        transition: all 0.3s ease;
+        border-radius: 20px;
+    }
+
+    .quick-question-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+</style>
+
+@code {
+    private List<ChatMessage> messages = new();
+    private string inputMessage = "";
+    private bool isLoading = false;
+    private ElementReference messagesContainer;
+    private UserDto? currentUser;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // 获取当前用户信息
+        try
+        {
+            currentUser = await AuthService.GetCurrentUserAsync();
+        }
+        catch
+        {
+            // 如果获取用户信息失败，继续使用匿名模式
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await ScrollToBottom();
+        }
+    }
+
+    private async Task SendMessage()
+    {
+        if (string.IsNullOrWhiteSpace(inputMessage) || isLoading)
+            return;
+
+        var userMessage = new ChatMessage
+        {
+            Content = inputMessage,
+            IsUser = true,
+            Timestamp = DateTime.Now
+        };
+
+        messages.Add(userMessage);
+        var currentInput = inputMessage;
+        inputMessage = "";
+        isLoading = true;
+
+        await ScrollToBottom();
+        StateHasChanged();
+
+        try
+        {
+            // 使用聊天服务获取AI响应，传递用户ID
+            var userId = currentUser?.Id.ToString();
+            var aiResponse = await ChatService.SendMessageAsync(currentInput, userId);
+            var aiMessage = new ChatMessage
+            {
+                Content = aiResponse,
+                IsUser = false,
+                Timestamp = DateTime.Now
+            };
+
+            messages.Add(aiMessage);
+        }
+        catch (Exception)
+        {
+            // 如果服务出错，显示错误消息
+            var errorMessage = new ChatMessage
+            {
+                Content = "抱歉，我现在无法回答您的问题。请稍后再试。",
+                IsUser = false,
+                Timestamp = DateTime.Now
+            };
+
+            messages.Add(errorMessage);
+        }
+
+        isLoading = false;
+        await ScrollToBottom();
+        StateHasChanged();
+    }
+
+    private async Task SendQuickMessage(string message)
+    {
+        inputMessage = message;
+        await SendMessage();
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey)
+        {
+            await SendMessage();
+        }
+    }
+
+    private void ClearChat()
+    {
+        messages.Clear();
+        StateHasChanged();
+    }
+
+    private async Task ScrollToBottom()
+    {
+        await JSRuntime.InvokeVoidAsync("scrollToBottom", messagesContainer);
+    }
+
+    public class ChatMessage
+    {
+        public string Content { get; set; } = "";
+        public bool IsUser { get; set; }
+        public DateTime Timestamp { get; set; }
+    }
+} 

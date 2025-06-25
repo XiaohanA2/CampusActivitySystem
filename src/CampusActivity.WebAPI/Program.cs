@@ -8,6 +8,10 @@ using CampusActivity.Infrastructure.UnitOfWork;
 using CampusActivity.Application.Services;
 using CampusActivity.Application.Mappings;
 using CampusActivity.Shared.Constants;
+using CampusActivity.Shared.DTOs;
+using CampusActivity.Infrastructure.Repositories;
+using Polly;
+using Polly.Extensions.Http;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -108,13 +112,17 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IActivityService, ActivityService>();
 builder.Services.AddScoped<IRecommendationService, RecommendationService>();
 builder.Services.AddScoped<IScheduleService, ScheduleService>();
+builder.Services.AddScoped<IUserContextService, UserContextService>();
+
+// 注册Repository
+builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 
 // 配置CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowBlazorApp", policy =>
     {
-        policy.WithOrigins("https://localhost:7000", "http://localhost:5150", "https://localhost:44310", "http://localhost:50771")
+        policy.WithOrigins("http://localhost:7150", "http://localhost:5150", "http://localhost:50771")
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials();
@@ -129,6 +137,18 @@ builder.Services.AddLogging(logging =>
     logging.AddDebug();
 });
 
+// 配置HTTP客户端
+builder.Services.AddHttpClient("OpenAI", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30); // 设置30秒超时
+    client.DefaultRequestHeaders.Add("User-Agent", "CampusActivitySystem/1.0");
+})
+.AddPolicyHandler(GetRetryPolicy())
+.AddPolicyHandler(GetCircuitBreakerPolicy());
+
+// 配置HTTP客户端工厂
+builder.Services.AddHttpClient();
+
 var app = builder.Build();
 
 // 配置HTTP请求管道
@@ -141,8 +161,10 @@ if (app.Environment.IsDevelopment())
         c.RoutePrefix = "swagger";
     });
 }
-
-app.UseHttpsRedirection();
+else
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseCors("AllowBlazorApp");
 
@@ -321,4 +343,36 @@ static async Task SeedData(ApplicationDbContext context)
             await context.SaveChangesAsync();
         }
     }
+}
+
+// 重试策略
+static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()
+{
+    return HttpPolicyExtensions
+        .HandleTransientHttpError()
+        .OrResult(msg => msg.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+        .WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
+            onRetry: (outcome, timespan, retryAttempt, context) =>
+            {
+                // 记录重试信息
+                Console.WriteLine($"OpenAI API调用失败，正在进行第{retryAttempt}次重试，等待{timespan.TotalMilliseconds}ms");
+            });
+}
+
+// 熔断器策略
+static IAsyncPolicy<HttpResponseMessage> GetCircuitBreakerPolicy()
+{
+    return HttpPolicyExtensions
+        .HandleTransientHttpError()
+        .CircuitBreakerAsync(5, TimeSpan.FromSeconds(30),
+            onBreak: (outcome, timespan) =>
+            {
+                // 记录熔断器开启信息
+                Console.WriteLine($"OpenAI API熔断器开启，将在{timespan.TotalMilliseconds}ms后重试");
+            },
+            onReset: () =>
+            {
+                // 记录熔断器重置信息
+                Console.WriteLine("OpenAI API熔断器重置");
+            });
 }

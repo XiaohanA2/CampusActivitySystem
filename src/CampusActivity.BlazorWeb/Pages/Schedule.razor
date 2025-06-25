@@ -299,14 +299,92 @@
     <div class="modal-backdrop fade show"></div>
 }
 
+<!-- 筛选模态框 -->
+@if (showFilterModal)
+{
+    <div class="modal fade show" style="display: block;" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">筛选日程</h5>
+                    <button type="button" class="btn-close" @onclick="CloseFilterModal"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="filterDto" OnValidSubmit="ApplyFilter">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">开始日期</label>
+                                <input class="form-control" type="date" @bind="filterDto.StartDate" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">结束日期</label>
+                                <input class="form-control" type="date" @bind="filterDto.EndDate" />
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">类型</label>
+                                <InputSelect class="form-control" @bind-Value="filterDto.Type">
+                                    <option value="">全部类型</option>
+                                    <option value="@ScheduleItemType.Personal">个人计划</option>
+                                    <option value="@ScheduleItemType.Activity">活动安排</option>
+                                    <option value="@ScheduleItemType.Reminder">提醒事项</option>
+                                    <option value="@ScheduleItemType.Meeting">会议</option>
+                                    <option value="@ScheduleItemType.Study">学习</option>
+                                    <option value="@ScheduleItemType.Other">其他</option>
+                                </InputSelect>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">优先级</label>
+                                <InputSelect class="form-control" @bind-Value="filterDto.Priority">
+                                    <option value="">全部优先级</option>
+                                    <option value="@ScheduleItemPriority.Low">低</option>
+                                    <option value="@ScheduleItemPriority.Medium">中</option>
+                                    <option value="@ScheduleItemPriority.High">高</option>
+                                    <option value="@ScheduleItemPriority.Urgent">紧急</option>
+                                </InputSelect>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">完成状态</label>
+                                <InputSelect class="form-control" @bind-Value="filterDto.IsCompleted">
+                                    <option value="">全部状态</option>
+                                    <option value="true">已完成</option>
+                                    <option value="false">未完成</option>
+                                </InputSelect>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">关键词</label>
+                                <InputText class="form-control" @bind-Value="filterDto.Keyword" placeholder="搜索标题或描述" />
+                            </div>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @onclick="ResetFilter">重置</button>
+                            <button type="button" class="btn btn-outline-secondary" @onclick="CloseFilterModal">取消</button>
+                            <button type="submit" class="btn btn-primary">应用筛选</button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
 @code {
     private PagedResultDto<ScheduleItemDto>? scheduleItems;
     private ScheduleStatisticsDto? statistics;
     private bool isLoading = false;
     private bool showModal = false;
+    private bool showFilterModal = false;
     private ScheduleItemDto? editingItem;
     private CreateScheduleItemDto currentItem = new();
     private ScheduleSearchDto searchDto = new();
+    private ScheduleSearchDto filterDto = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -408,6 +486,59 @@
         currentItem = new();
     }
 
+    private void ShowFilterModal()
+    {
+        // 将当前的搜索条件复制到筛选表单中
+        filterDto = new ScheduleSearchDto
+        {
+            StartDate = searchDto.StartDate,
+            EndDate = searchDto.EndDate,
+            Type = searchDto.Type,
+            Priority = searchDto.Priority,
+            IsCompleted = searchDto.IsCompleted,
+            Keyword = searchDto.Keyword,
+            PageIndex = 1,
+            PageSize = searchDto.PageSize
+        };
+        showFilterModal = true;
+    }
+
+    private void CloseFilterModal()
+    {
+        showFilterModal = false;
+    }
+
+    private async Task ApplyFilter()
+    {
+        // 将筛选条件应用到搜索条件
+        searchDto.StartDate = filterDto.StartDate;
+        searchDto.EndDate = filterDto.EndDate;
+        searchDto.Type = filterDto.Type;
+        searchDto.Priority = filterDto.Priority;
+        searchDto.IsCompleted = filterDto.IsCompleted;
+        searchDto.Keyword = filterDto.Keyword;
+        searchDto.PageIndex = 1; // 重置到第一页
+
+        CloseFilterModal();
+        await LoadScheduleItems();
+    }
+
+    private async Task ResetFilter()
+    {
+        filterDto = new ScheduleSearchDto
+        {
+            PageIndex = 1,
+            PageSize = searchDto.PageSize
+        };
+        searchDto = new ScheduleSearchDto
+        {
+            PageIndex = 1,
+            PageSize = searchDto.PageSize
+        };
+        CloseFilterModal();
+        await LoadScheduleItems();
+    }
+
     private async Task SaveItem()
     {
         try
@@ -501,11 +632,6 @@
     {
         searchDto.PageIndex = pageIndex;
         await LoadScheduleItems();
-    }
-
-    private void ShowFilterModal()
-    {
-        // 这里可以实现筛选模态框
     }
 
     private string GetTypeBadgeClass(ScheduleItemType type)

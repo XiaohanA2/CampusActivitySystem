@@ -27,6 +27,20 @@ public class UserDto
     public UserRole Role { get; set; }
     
     public bool IsActive { get; set; } = true;
+    
+    public DateTime? LastLoginAt { get; set; }
+    
+    public string? StudentId { get; set; }
+    
+    public string? Major { get; set; }
+    
+    public int? Grade { get; set; }
+    
+    public string? EmployeeId { get; set; }
+    
+    public string? Department { get; set; }
+    
+    public string? Title { get; set; }
 }
 
 public class LoginDto

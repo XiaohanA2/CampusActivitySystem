@@ -1,9 +1,13 @@
 @page "/api-test"
+@using System.Text
+@using System.Text.Json
 @using CampusActivity.Shared.DTOs
 @using CampusActivity.Shared.Enums
+@using CampusActivity.BlazorWeb.Services
 @inject HttpClient Http
 @inject IConfiguration Config
 @inject IAuthService AuthService
+@inject IHttpClientFactory HttpClientFactory
 
 <PageTitle>API连接测试</PageTitle>
 
@@ -63,6 +67,15 @@
                     </button>
                     <button class="btn btn-info w-100 mb-2" @onclick="TestPublicApis" disabled="@isTesting">
                         测试公开API
+                    </button>
+                    <button class="btn btn-warning w-100 mb-2" @onclick="TestScheduleCompleteFlow" disabled="@(!isAuthenticated || isTesting)">
+                        日程表完整流程测试
+                    </button>
+                    <button class="btn btn-warning w-100 mb-2" @onclick="TestActivityScheduleIntegration" disabled="@(!isAuthenticated || isTesting)">
+                        活动日程集成测试
+                    </button>
+                    <button class="btn btn-warning w-100 mb-2" @onclick="TestRecommendationCompleteFlow" disabled="@(!isAuthenticated || isTesting)">
+                        推荐系统完整测试
                     </button>
                     <button class="btn btn-secondary w-100" @onclick="ClearLogs">清空日志</button>
                 </div>
@@ -128,6 +141,12 @@
                         <button class="btn btn-outline-success" @onclick="TestGetPopularActivities" disabled="@isTesting">
                             获取热门活动
                         </button>
+                        <button class="btn btn-outline-success" @onclick="TestWebApiStatus" disabled="@isTesting">
+                            WebAPI状态检查
+                        </button>
+                        <button class="btn btn-outline-success" @onclick="TestHttpClientConfig" disabled="@isTesting">
+                            HTTP客户端配置测试
+                        </button>
                     </div>
                 </div>
             </div>
@@ -161,6 +180,9 @@
                         </button>
                         <button class="btn btn-outline-primary" @onclick="TestCreateActivityApi" disabled="@(!isAuthenticated || isTesting)">
                             创建活动测试
+                        </button>
+                        <button class="btn btn-outline-primary" @onclick="TestAiApiTimeout" disabled="@(!isAuthenticated || isTesting)">
+                            AI API超时测试
                         </button>
                     </div>
                 </div>
@@ -241,32 +263,44 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-3">
+                            <h6>基础推荐</h6>
                             <div class="d-grid gap-2">
-                                <button class="btn btn-outline-warning" @onclick="TestGetPersonalizedRecommendations" disabled="@(!isAuthenticated || isTesting)">
+                                <button class="btn btn-outline-info" @onclick="TestGetPersonalizedRecommendations" disabled="@(!isAuthenticated || isTesting)">
                                     个性化推荐
                                 </button>
-                                <button class="btn btn-outline-warning" @onclick="TestGetCollaborativeRecommendations" disabled="@(!isAuthenticated || isTesting)">
+                                <button class="btn btn-outline-info" @onclick="TestGetCollaborativeRecommendations" disabled="@(!isAuthenticated || isTesting)">
                                     协同过滤推荐
                                 </button>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="d-grid gap-2">
-                                <button class="btn btn-outline-warning" @onclick="TestGetContentBasedRecommendations" disabled="@(!isAuthenticated || isTesting)">
+                                <button class="btn btn-outline-info" @onclick="TestGetContentBasedRecommendations" disabled="@(!isAuthenticated || isTesting)">
                                     基于内容的推荐
                                 </button>
-                                <button class="btn btn-outline-warning" @onclick="TestGetUserPreferences" disabled="@(!isAuthenticated || isTesting)">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <h6>用户偏好</h6>
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-outline-info" @onclick="TestGetUserPreferences" disabled="@(!isAuthenticated || isTesting)">
                                     获取用户偏好
+                                </button>
+                                <button class="btn btn-outline-warning" @onclick="TestUpdateUserPreference" disabled="@(!isAuthenticated || isTesting)">
+                                    更新用户偏好
+                                </button>
+                                <button class="btn btn-outline-success" @onclick="TestRecalculateRecommendations" disabled="@(!isAuthenticated || isTesting)">
+                                    重新计算推荐
                                 </button>
                             </div>
                         </div>
                         <div class="col-md-3">
+                            <h6>诊断测试</h6>
                             <div class="d-grid gap-2">
-                                <button class="btn btn-outline-warning" @onclick="TestUpdatePreferenceApi" disabled="@(!isAuthenticated || isTesting)">
-                                    更新用户偏好
+                                <button class="btn btn-outline-warning" @onclick="TestRecommendationBasicConnection" disabled="@(!isAuthenticated || isTesting)">
+                                    推荐系统连接测试
                                 </button>
-                                <button class="btn btn-outline-warning" @onclick="TestRecalculateRecommendations" disabled="@(!isAuthenticated || isTesting)">
-                                    重新计算推荐
+                                <button class="btn btn-outline-warning" @onclick="TestRecommendationDiagnostics" disabled="@(!isAuthenticated || isTesting)">
+                                    推荐系统诊断测试
+                                </button>
+                                <button class="btn btn-outline-warning" @onclick="TestRecommendationRoutes" disabled="@(!isAuthenticated || isTesting)">
+                                    推荐系统路由测试
                                 </button>
                             </div>
                         </div>
@@ -286,8 +320,6 @@
     private string testPassword = "040228";
     private int? createdScheduleId = null;
     private int? createdActivityId = null;
-
-    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
 
     protected override async Task OnInitializedAsync()
     {
@@ -500,10 +532,9 @@
         await TestApiEndpoint(client, "GET", "api/recommendations/preferences", "获取用户偏好");
         
         // 测试更新用户偏好
-        var updatePreferenceDto = new { CategoryId = 1, Weight = 0.8 };
-        await TestApiEndpoint(client, "POST", "api/recommendations/preferences", "更新用户偏好", updatePreferenceDto);
+        await TestUpdateUserPreference();
         
-        await TestApiEndpoint(client, "POST", "api/recommendations/recalculate", "重新计算推荐");
+        await TestRecalculateRecommendations();
     }
 
     // 单个API测试方法
@@ -520,6 +551,124 @@
         finally
         {
             isTesting = false;
+        }
+    }
+
+    private async Task TestApiEndpoint(HttpClient client, string method, string endpoint, string description, object? data = null)
+    {
+        try
+        {
+            AddLog($"测试 {method} {endpoint} - {description}", LogType.Info);
+            AddLog($"HTTP客户端BaseAddress: {client.BaseAddress}", LogType.Info);
+            
+            // 对于需要认证的API，尝试设置认证头
+            if (endpoint.StartsWith("api/auth/") || endpoint.StartsWith("api/activities/") || 
+                endpoint.StartsWith("api/schedule") || endpoint.StartsWith("api/recommendations"))
+            {
+                AddLog("检测到需要认证的API，开始设置认证头...", LogType.Info);
+                await SetAuthHeader(client);
+                
+                // 验证认证头是否设置成功
+                var authHeader = client.DefaultRequestHeaders.Authorization;
+                if (authHeader != null)
+                {
+                    AddLog($"✅ 认证头已设置: {authHeader.Scheme} {authHeader.Parameter?.Substring(0, Math.Min(50, authHeader.Parameter.Length))}...", LogType.Success);
+                }
+                else
+                {
+                    AddLog("❌ 认证头未设置", LogType.Error);
+                }
+            }
+            else
+            {
+                AddLog("此API不需要认证", LogType.Info);
+            }
+            
+            HttpResponseMessage response;
+            string requestBody = "";
+            
+            if (data != null)
+            {
+                var json = System.Text.Json.JsonSerializer.Serialize(data);
+                requestBody = json;
+                var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+                
+                response = method.ToUpper() switch
+                {
+                    "POST" => await client.PostAsync(endpoint, content),
+                    "PUT" => await client.PutAsync(endpoint, content),
+                    "DELETE" => await client.DeleteAsync(endpoint),
+                    _ => await client.GetAsync(endpoint)
+                };
+            }
+            else
+            {
+                response = method.ToUpper() switch
+                {
+                    "GET" => await client.GetAsync(endpoint),
+                    "DELETE" => await client.DeleteAsync(endpoint),
+                    _ => await client.GetAsync(endpoint)
+                };
+            }
+            
+            var responseContent = await response.Content.ReadAsStringAsync();
+            var statusCode = response.StatusCode;
+            
+            if (response.IsSuccessStatusCode)
+            {
+                AddLog($"✅ {description} 成功 ({(int)statusCode})", LogType.Success);
+                
+                // 如果是创建操作，尝试获取创建的ID
+                if (method.ToUpper() == "POST" && !string.IsNullOrEmpty(responseContent))
+                {
+                    try
+                    {
+                        // 尝试解析日程项
+                        if (endpoint.Contains("schedule"))
+                        {
+                            var scheduleResult = System.Text.Json.JsonSerializer.Deserialize<ScheduleItemDto>(responseContent);
+                            if (scheduleResult != null)
+                            {
+                                createdScheduleId = scheduleResult.Id;
+                                AddLog($"创建的日程项ID: {createdScheduleId}", LogType.Info);
+                            }
+                        }
+                        // 尝试解析活动
+                        else if (endpoint.Contains("activities") && !endpoint.Contains("my-registrations"))
+                        {
+                            var activityResult = System.Text.Json.JsonSerializer.Deserialize<ActivityDto>(responseContent);
+                            if (activityResult != null)
+                            {
+                                createdActivityId = activityResult.Id;
+                                AddLog($"创建的活动ID: {createdActivityId}", LogType.Info);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        AddLog($"解析响应数据失败: {ex.Message}", LogType.Warning);
+                    }
+                }
+                
+                if (!string.IsNullOrEmpty(responseContent) && responseContent.Length < 200)
+                {
+                    AddLog($"响应: {responseContent}", LogType.Info);
+                }
+            }
+            else
+            {
+                AddLog($"❌ {description} 失败 ({(int)statusCode}): {responseContent}", LogType.Error);
+                
+                // 如果是401错误，提示用户重新登录
+                if (statusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    AddLog("提示: 请先登录或重新登录", LogType.Warning);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            AddLog($"❌ {description} 异常: {ex.Message}", LogType.Error);
         }
     }
 
@@ -651,10 +800,32 @@
     }
 
     // 推荐系统相关测试方法
-    private async Task TestUpdatePreferenceApi()
+    private async Task TestUpdateUserPreference()
     {
-        var updatePreferenceDto = new { CategoryId = 1, Weight = 0.8 };
-        await TestSingleApi("POST", "api/recommendations/preferences", "更新用户偏好", updatePreferenceDto);
+        try
+        {
+            AddLog("开始测试更新用户偏好...", LogType.Info);
+            
+            var updateDto = new { CategoryId = 1, Weight = 0.8 };
+            var json = JsonSerializer.Serialize(updateDto);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            
+            var response = await Http.PostAsync("api/recommendations/preferences", content);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var responseContent = await response.Content.ReadAsStringAsync();
+                AddLog($"✅ 更新用户偏好成功: {responseContent}", LogType.Success);
+            }
+            else
+            {
+                AddLog($"❌ 更新用户偏好失败: {response.StatusCode} - {response.ReasonPhrase}", LogType.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            AddLog($"❌ 更新用户偏好异常: {ex.Message}", LogType.Error);
+        }
     }
 
     // 公开API测试方法
@@ -741,14 +912,28 @@
         await TestSingleApi("GET", "api/recommendations/content-based?count=5", "获取基于内容的推荐");
     }
 
-    private async Task TestGetUserPreferences()
-    {
-        await TestSingleApi("GET", "api/recommendations/preferences", "获取用户偏好");
-    }
-
     private async Task TestRecalculateRecommendations()
     {
-        await TestSingleApi("POST", "api/recommendations/recalculate", "重新计算推荐");
+        try
+        {
+            AddLog("开始测试重新计算推荐...", LogType.Info);
+            
+            var response = await Http.PostAsync("api/recommendations/recalculate", null);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                AddLog($"✅ 重新计算推荐成功: {content}", LogType.Success);
+            }
+            else
+            {
+                AddLog($"❌ 重新计算推荐失败: {response.StatusCode} - {response.ReasonPhrase}", LogType.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            AddLog($"❌ 重新计算推荐异常: {ex.Message}", LogType.Error);
+        }
     }
 
     // 认证相关测试方法
@@ -861,107 +1046,6 @@
         }
     }
 
-    private async Task TestApiEndpoint(HttpClient client, string method, string endpoint, string description, object? data = null)
-    {
-        try
-        {
-            AddLog($"测试 {method} {endpoint} - {description}", LogType.Info);
-            AddLog($"HTTP客户端BaseAddress: {client.BaseAddress}", LogType.Info);
-            
-            // 对于需要认证的API，尝试设置认证头
-            if (endpoint.StartsWith("api/auth/") || endpoint.StartsWith("api/activities/") || 
-                endpoint.StartsWith("api/schedule") || endpoint.StartsWith("api/recommendations/"))
-            {
-                AddLog("检测到需要认证的API，开始设置认证头...", LogType.Info);
-                await SetAuthHeader(client);
-                
-                // 验证认证头是否设置成功
-                var authHeader = client.DefaultRequestHeaders.Authorization;
-                if (authHeader != null)
-                {
-                    AddLog($"✅ 认证头已设置: {authHeader.Scheme} {authHeader.Parameter?.Substring(0, Math.Min(50, authHeader.Parameter.Length))}...", LogType.Success);
-                }
-                else
-                {
-                    AddLog("❌ 认证头未设置", LogType.Error);
-                }
-            }
-            else
-            {
-                AddLog("此API不需要认证", LogType.Info);
-            }
-            
-            HttpResponseMessage response;
-            string requestBody = "";
-            
-            if (data != null)
-            {
-                var json = System.Text.Json.JsonSerializer.Serialize(data);
-                requestBody = json;
-                var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
-                
-                response = method.ToUpper() switch
-                {
-                    "POST" => await client.PostAsync(endpoint, content),
-                    "PUT" => await client.PutAsync(endpoint, content),
-                    "DELETE" => await client.DeleteAsync(endpoint),
-                    _ => await client.GetAsync(endpoint)
-                };
-            }
-            else
-            {
-                response = method.ToUpper() switch
-                {
-                    "GET" => await client.GetAsync(endpoint),
-                    "DELETE" => await client.DeleteAsync(endpoint),
-                    _ => await client.GetAsync(endpoint)
-                };
-            }
-            
-            var responseContent = await response.Content.ReadAsStringAsync();
-            var statusCode = response.StatusCode;
-            
-            if (response.IsSuccessStatusCode)
-            {
-                AddLog($"✅ {description} 成功 ({(int)statusCode})", LogType.Success);
-                
-                // 如果是创建操作，尝试获取创建的ID
-                if (method.ToUpper() == "POST" && endpoint.Contains("schedule") && !string.IsNullOrEmpty(responseContent))
-                {
-                    try
-                    {
-                        var result = System.Text.Json.JsonSerializer.Deserialize<ScheduleItemDto>(responseContent);
-                        if (result != null)
-                        {
-                            createdScheduleId = result.Id;
-                            AddLog($"创建的日程项ID: {createdScheduleId}", LogType.Info);
-                        }
-                    }
-                    catch { }
-                }
-                
-                if (!string.IsNullOrEmpty(responseContent) && responseContent.Length < 200)
-                {
-                    AddLog($"响应: {responseContent}", LogType.Info);
-                }
-            }
-            else
-            {
-                AddLog($"❌ {description} 失败 ({(int)statusCode}): {responseContent}", LogType.Error);
-                
-                // 如果是401错误，提示用户重新登录
-                if (statusCode == System.Net.HttpStatusCode.Unauthorized)
-                {
-                    AddLog("提示: 请先登录或重新登录", LogType.Warning);
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            AddLog($"❌ {description} 异常: {ex.Message}", LogType.Error);
-        }
-    }
-
     private async Task SetAuthHeader(HttpClient client)
     {
         try
@@ -1036,5 +1120,574 @@
         Success,
         Warning,
         Error
+    }
+
+    // 改进的日程表测试方法 - 完整流程测试
+    private async Task TestScheduleCompleteFlow()
+    {
+        AddLog("=== 开始日程表完整流程测试 ===", LogType.Info);
+        
+        try
+        {
+            // 1. 创建日程项
+            AddLog("步骤1: 创建日程项", LogType.Info);
+            var createScheduleDto = new CreateScheduleItemDto
+            {
+                Title = $"完整测试日程 {DateTime.Now:yyyy-MM-dd HH:mm:ss}",
+                Description = "这是一个用于完整测试的日程项",
+                StartTime = DateTime.Now.AddDays(1),
+                EndTime = DateTime.Now.AddDays(1).AddHours(1),
+                Type = ScheduleItemType.Personal,
+                Priority = ScheduleItemPriority.Medium,
+                Location = "测试地点"
+            };
+            
+            await TestSingleApi("POST", "api/schedule", "创建日程项", createScheduleDto);
+            
+            if (!createdScheduleId.HasValue)
+            {
+                AddLog("❌ 创建日程项失败，无法获取ID，停止测试", LogType.Error);
+                return;
+            }
+            
+            AddLog($"✅ 日程项创建成功，ID: {createdScheduleId.Value}", LogType.Success);
+            
+            // 2. 更新日程项
+            AddLog("步骤2: 更新日程项", LogType.Info);
+            var updateScheduleDto = new UpdateScheduleItemDto
+            {
+                Id = createdScheduleId.Value,
+                Title = $"更新后的日程 {DateTime.Now:yyyy-MM-dd HH:mm:ss}",
+                Description = "这是更新后的日程项描述",
+                StartTime = DateTime.Now.AddDays(2),
+                EndTime = DateTime.Now.AddDays(2).AddHours(1),
+                Type = ScheduleItemType.Personal,
+                Priority = ScheduleItemPriority.High,
+                Location = "更新后的地点",
+                IsCompleted = false
+            };
+            
+            await TestSingleApi("PUT", $"api/schedule/{createdScheduleId.Value}", "更新日程项", updateScheduleDto);
+            
+            // 3. 切换完成状态
+            AddLog("步骤3: 切换完成状态", LogType.Info);
+            await TestSingleApi("POST", $"api/schedule/{createdScheduleId.Value}/toggle-completion", "切换完成状态");
+            
+            // 4. 再次切换完成状态
+            AddLog("步骤4: 再次切换完成状态", LogType.Info);
+            await TestSingleApi("POST", $"api/schedule/{createdScheduleId.Value}/toggle-completion", "再次切换完成状态");
+            
+            // 5. 删除日程项
+            AddLog("步骤5: 删除日程项", LogType.Info);
+            await TestSingleApi("DELETE", $"api/schedule/{createdScheduleId.Value}", "删除日程项");
+            
+            // 清理ID
+            createdScheduleId = null;
+            
+            AddLog("✅ 日程表完整流程测试完成", LogType.Success);
+        }
+        catch (Exception ex)
+        {
+            AddLog($"❌ 日程表完整流程测试失败: {ex.Message}", LogType.Error);
+        }
+    }
+
+    // 改进的活动和日程关联测试方法
+    private async Task TestActivityScheduleIntegration()
+    {
+        AddLog("=== 开始活动和日程关联测试 ===", LogType.Info);
+        
+        try
+        {
+            // 1. 创建活动
+            AddLog("步骤1: 创建活动", LogType.Info);
+            var createActivityDto = new CreateActivityDto
+            {
+                Title = $"集成测试活动 {DateTime.Now:yyyy-MM-dd HH:mm:ss}",
+                Description = "这是一个用于集成测试的活动",
+                StartTime = DateTime.Now.AddDays(3),
+                EndTime = DateTime.Now.AddDays(3).AddHours(2),
+                RegistrationDeadline = DateTime.Now.AddDays(2),
+                Location = "集成测试地点",
+                MaxParticipants = 30,
+                CategoryId = 1
+            };
+            
+            await TestSingleApi("POST", "api/activities", "创建活动", createActivityDto);
+            
+            if (!createdActivityId.HasValue)
+            {
+                AddLog("❌ 创建活动失败，无法获取ID，停止测试", LogType.Error);
+                return;
+            }
+            
+            AddLog($"✅ 活动创建成功，ID: {createdActivityId.Value}", LogType.Success);
+            
+            // 2. 添加活动到日程
+            AddLog("步骤2: 添加活动到日程", LogType.Info);
+            await TestSingleApi("POST", $"api/schedule/activities/{createdActivityId.Value}", "添加活动到日程");
+            
+            // 3. 从日程移除活动
+            AddLog("步骤3: 从日程移除活动", LogType.Info);
+            await TestSingleApi("DELETE", $"api/schedule/activities/{createdActivityId.Value}", "从日程移除活动");
+            
+            // 清理ID
+            createdActivityId = null;
+            
+            AddLog("✅ 活动和日程关联测试完成", LogType.Success);
+        }
+        catch (Exception ex)
+        {
+            AddLog($"❌ 活动和日程关联测试失败: {ex.Message}", LogType.Error);
+        }
+    }
+
+    // 改进的推荐系统测试方法
+    private async Task TestRecommendationCompleteFlow()
+    {
+        AddLog("=== 开始推荐系统完整流程测试 ===", LogType.Info);
+        
+        try
+        {
+            // 1. 获取个性化推荐
+            AddLog("步骤1: 获取个性化推荐", LogType.Info);
+            await TestSingleApi("GET", "api/recommendations?count=5", "获取个性化推荐");
+            
+            // 2. 获取协同过滤推荐
+            AddLog("步骤2: 获取协同过滤推荐", LogType.Info);
+            await TestSingleApi("GET", "api/recommendations/collaborative?count=5", "获取协同过滤推荐");
+            
+            // 3. 获取基于内容的推荐
+            AddLog("步骤3: 获取基于内容的推荐", LogType.Info);
+            await TestSingleApi("GET", "api/recommendations/content-based?count=5", "获取基于内容的推荐");
+            
+            // 4. 获取用户偏好
+            await TestGetUserPreferences();
+            
+            // 5. 更新用户偏好
+            await TestUpdateUserPreference();
+            
+            // 6. 重新计算推荐
+            await TestRecalculateRecommendations();
+            
+            AddLog("✅ 推荐系统完整流程测试完成", LogType.Success);
+        }
+        catch (Exception ex)
+        {
+            AddLog($"❌ 推荐系统完整流程测试失败: {ex.Message}", LogType.Error);
+        }
+    }
+
+    // 简单的推荐系统连接测试
+    private async Task TestRecommendationBasicConnection()
+    {
+        AddLog("=== 测试推荐系统基本连接 ===", LogType.Info);
+        
+        try
+        {
+            var client = HttpClientFactory.CreateClient("CampusActivityAPI");
+            await SetAuthHeader(client);
+            
+            // 测试GET请求
+            AddLog("测试GET /api/recommendations", LogType.Info);
+            var getResponse = await client.GetAsync("api/recommendations?count=1");
+            AddLog($"GET响应状态: {(int)getResponse.StatusCode} - {getResponse.StatusCode}", LogType.Info);
+            
+            // 测试POST请求
+            AddLog("测试POST /api/recommendations/recalculate", LogType.Info);
+            var postResponse = await client.PostAsync("api/recommendations/recalculate", null);
+            AddLog($"POST响应状态: {(int)postResponse.StatusCode} - {postResponse.StatusCode}", LogType.Info);
+            
+            if (getResponse.IsSuccessStatusCode)
+            {
+                AddLog("✅ GET /api/recommendations 连接成功", LogType.Success);
+            }
+            else
+            {
+                var getContent = await getResponse.Content.ReadAsStringAsync();
+                AddLog($"❌ GET /api/recommendations 失败: {getContent}", LogType.Error);
+            }
+            
+            if (postResponse.IsSuccessStatusCode)
+            {
+                AddLog("✅ POST /api/recommendations/recalculate 连接成功", LogType.Success);
+            }
+            else
+            {
+                var postContent = await postResponse.Content.ReadAsStringAsync();
+                AddLog($"❌ POST /api/recommendations/recalculate 失败: {postContent}", LogType.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            AddLog($"❌ 推荐系统连接测试异常: {ex.Message}", LogType.Error);
+        }
+    }
+
+    // 详细的推荐系统诊断测试
+    private async Task TestRecommendationDiagnostics()
+    {
+        AddLog("=== 推荐系统详细诊断 ===", LogType.Info);
+        
+        try
+        {
+            var client = HttpClientFactory.CreateClient("CampusActivityAPI");
+            
+            // 1. 检查认证状态
+            AddLog("步骤1: 检查认证状态", LogType.Info);
+            var token = await AuthService.GetTokenAsync();
+            if (string.IsNullOrEmpty(token))
+            {
+                AddLog("❌ 未找到认证token", LogType.Error);
+                return;
+            }
+            AddLog($"✅ 找到认证token，长度: {token.Length}", LogType.Success);
+            
+            // 2. 设置认证头
+            AddLog("步骤2: 设置认证头", LogType.Info);
+            client.DefaultRequestHeaders.Authorization = 
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            AddLog("✅ 认证头已设置", LogType.Success);
+            
+            // 3. 测试基础连接
+            AddLog("步骤3: 测试基础连接", LogType.Info);
+            var baseResponse = await client.GetAsync("api/test");
+            AddLog($"基础连接状态: {(int)baseResponse.StatusCode} - {baseResponse.StatusCode}", LogType.Info);
+            
+            // 4. 测试推荐系统GET端点
+            AddLog("步骤4: 测试推荐系统GET端点", LogType.Info);
+            var getResponse = await client.GetAsync("api/recommendations?count=1");
+            AddLog($"GET /api/recommendations 状态: {(int)getResponse.StatusCode} - {getResponse.StatusCode}", LogType.Info);
+            
+            if (!getResponse.IsSuccessStatusCode)
+            {
+                var getContent = await getResponse.Content.ReadAsStringAsync();
+                AddLog($"GET响应内容: {getContent}", LogType.Error);
+            }
+            
+            // 5. 测试推荐系统POST端点
+            AddLog("步骤5: 测试推荐系统POST端点", LogType.Info);
+            var postResponse = await client.PostAsync("api/recommendations/recalculate", null);
+            AddLog($"POST /api/recommendations/recalculate 状态: {(int)postResponse.StatusCode} - {postResponse.StatusCode}", LogType.Info);
+            
+            if (!postResponse.IsSuccessStatusCode)
+            {
+                var postContent = await postResponse.Content.ReadAsStringAsync();
+                AddLog($"POST响应内容: {postContent}", LogType.Error);
+            }
+            
+            // 6. 检查响应头
+            AddLog("步骤6: 检查响应头", LogType.Info);
+            AddLog($"GET响应头: {string.Join(", ", getResponse.Headers.Select(h => $"{h.Key}={string.Join(";", h.Value)}"))}", LogType.Info);
+            AddLog($"POST响应头: {string.Join(", ", postResponse.Headers.Select(h => $"{h.Key}={string.Join(";", h.Value)}"))}", LogType.Info);
+            
+            // 7. 总结
+            AddLog("步骤7: 诊断总结", LogType.Info);
+            if (getResponse.IsSuccessStatusCode && postResponse.IsSuccessStatusCode)
+            {
+                AddLog("✅ 推荐系统API工作正常", LogType.Success);
+            }
+            else
+            {
+                AddLog("❌ 推荐系统API存在问题", LogType.Error);
+                if (!getResponse.IsSuccessStatusCode)
+                {
+                    AddLog($"GET请求失败: {(int)getResponse.StatusCode} - {getResponse.StatusCode}", LogType.Error);
+                }
+                if (!postResponse.IsSuccessStatusCode)
+                {
+                    AddLog($"POST请求失败: {(int)postResponse.StatusCode} - {postResponse.StatusCode}", LogType.Error);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            AddLog($"❌ 诊断测试异常: {ex.Message}", LogType.Error);
+            AddLog($"异常堆栈: {ex.StackTrace}", LogType.Error);
+        }
+    }
+
+    // 简单的路由测试
+    private async Task TestRecommendationRoutes()
+    {
+        AddLog("=== 测试推荐系统路由 ===", LogType.Info);
+        
+        try
+        {
+            var client = HttpClientFactory.CreateClient("CampusActivityAPI");
+            await SetAuthHeader(client);
+            
+            // 测试所有可能的HTTP方法
+            var methods = new[] { "GET", "POST", "PUT", "DELETE", "PATCH" };
+            var endpoints = new[] 
+            { 
+                "api/recommendations",
+                "api/recommendations/recalculate",
+                "api/recommendations/preferences"
+            };
+            
+            foreach (var endpoint in endpoints)
+            {
+                AddLog($"测试端点: {endpoint}", LogType.Info);
+                foreach (var method in methods)
+                {
+                    try
+                    {
+                        HttpResponseMessage response;
+                        switch (method)
+                        {
+                            case "GET":
+                                response = await client.GetAsync(endpoint);
+                                break;
+                            case "POST":
+                                response = await client.PostAsync(endpoint, null);
+                                break;
+                            case "PUT":
+                                response = await client.PutAsync(endpoint, null);
+                                break;
+                            case "DELETE":
+                                response = await client.DeleteAsync(endpoint);
+                                break;
+                            case "PATCH":
+                                response = await client.PatchAsync(endpoint, null);
+                                break;
+                            default:
+                                continue;
+                        }
+                        
+                        var statusCode = (int)response.StatusCode;
+                        var statusText = response.StatusCode.ToString();
+                        
+                        if (statusCode == 405)
+                        {
+                            AddLog($"  {method}: {statusCode} - {statusText} (方法不被允许)", LogType.Warning);
+                        }
+                        else if (statusCode == 401)
+                        {
+                            AddLog($"  {method}: {statusCode} - {statusText} (需要认证)", LogType.Warning);
+                        }
+                        else if (statusCode == 404)
+                        {
+                            AddLog($"  {method}: {statusCode} - {statusText} (未找到)", LogType.Warning);
+                        }
+                        else if (statusCode >= 200 && statusCode < 300)
+                        {
+                            AddLog($"  {method}: {statusCode} - {statusText} ✅", LogType.Success);
+                        }
+                        else
+                        {
+                            AddLog($"  {method}: {statusCode} - {statusText}", LogType.Info);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        AddLog($"  {method}: 异常 - {ex.Message}", LogType.Error);
+                    }
+                }
+                AddLog("", LogType.Info); // 空行分隔
+            }
+        }
+        catch (Exception ex)
+        {
+            AddLog($"❌ 路由测试异常: {ex.Message}", LogType.Error);
+        }
+    }
+
+    // WebAPI状态检查
+    private async Task TestWebApiStatus()
+    {
+        AddLog("=== WebAPI状态检查 ===", LogType.Info);
+        
+        try
+        {
+            var client = HttpClientFactory.CreateClient("CampusActivityAPI");
+            
+            // 1. 测试基础连接
+            AddLog("步骤1: 测试基础连接", LogType.Info);
+            var baseResponse = await client.GetAsync("api/test");
+            AddLog($"基础连接状态: {(int)baseResponse.StatusCode} - {baseResponse.StatusCode}", LogType.Info);
+            
+            if (baseResponse.IsSuccessStatusCode)
+            {
+                var baseContent = await baseResponse.Content.ReadAsStringAsync();
+                AddLog($"基础连接响应: {baseContent}", LogType.Success);
+            }
+            
+            // 2. 测试健康检查
+            AddLog("步骤2: 测试健康检查", LogType.Info);
+            var healthResponse = await client.GetAsync("api/test/health");
+            AddLog($"健康检查状态: {(int)healthResponse.StatusCode} - {healthResponse.StatusCode}", LogType.Info);
+            
+            if (healthResponse.IsSuccessStatusCode)
+            {
+                var healthContent = await healthResponse.Content.ReadAsStringAsync();
+                AddLog($"健康检查响应: {healthContent}", LogType.Success);
+            }
+            
+            // 3. 测试数据库连接
+            AddLog("步骤3: 测试数据库连接", LogType.Info);
+            var dbResponse = await client.GetAsync("api/test/database");
+            AddLog($"数据库连接状态: {(int)dbResponse.StatusCode} - {dbResponse.StatusCode}", LogType.Info);
+            
+            if (dbResponse.IsSuccessStatusCode)
+            {
+                var dbContent = await dbResponse.Content.ReadAsStringAsync();
+                AddLog($"数据库连接响应: {dbContent}", LogType.Success);
+            }
+            
+            // 4. 测试Swagger文档
+            AddLog("步骤4: 测试Swagger文档", LogType.Info);
+            var swaggerResponse = await client.GetAsync("swagger/v1/swagger.json");
+            AddLog($"Swagger文档状态: {(int)swaggerResponse.StatusCode} - {swaggerResponse.StatusCode}", LogType.Info);
+            
+            // 5. 测试推荐系统端点（无认证）
+            AddLog("步骤5: 测试推荐系统端点（无认证）", LogType.Info);
+            var recResponse = await client.GetAsync("api/recommendations");
+            AddLog($"推荐系统状态: {(int)recResponse.StatusCode} - {recResponse.StatusCode}", LogType.Info);
+            
+            if (recResponse.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                AddLog("✅ 推荐系统端点存在，但需要认证", LogType.Success);
+            }
+            else if (recResponse.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                AddLog("❌ 推荐系统端点不存在", LogType.Error);
+            }
+            else
+            {
+                var recContent = await recResponse.Content.ReadAsStringAsync();
+                AddLog($"推荐系统响应: {recContent}", LogType.Info);
+            }
+            
+            // 6. 总结
+            AddLog("步骤6: 状态总结", LogType.Info);
+            if (baseResponse.IsSuccessStatusCode && healthResponse.IsSuccessStatusCode)
+            {
+                AddLog("✅ WebAPI服务器运行正常", LogType.Success);
+            }
+            else
+            {
+                AddLog("❌ WebAPI服务器存在问题", LogType.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            AddLog($"❌ WebAPI状态检查异常: {ex.Message}", LogType.Error);
+        }
+    }
+
+    // 简单的HTTP客户端测试
+    private async Task TestHttpClientConfig()
+    {
+        AddLog("=== HTTP客户端配置测试 ===", LogType.Info);
+        
+        try
+        {
+            var client = HttpClientFactory.CreateClient("CampusActivityAPI");
+            
+            AddLog($"HTTP客户端BaseAddress: {client.BaseAddress}", LogType.Info);
+            AddLog($"HTTP客户端默认请求头: {string.Join(", ", client.DefaultRequestHeaders.Select(h => $"{h.Key}={string.Join(";", h.Value)}"))}", LogType.Info);
+            
+            // 测试直接访问
+            AddLog("测试直接访问 api/test", LogType.Info);
+            var response = await client.GetAsync("api/test");
+            AddLog($"响应状态: {(int)response.StatusCode} - {response.StatusCode}", LogType.Info);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                AddLog($"响应内容: {content}", LogType.Success);
+            }
+            else
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                AddLog($"错误响应: {content}", LogType.Error);
+            }
+            
+            // 测试完整URL
+            AddLog("测试完整URL", LogType.Info);
+            var fullUrl = $"{client.BaseAddress}api/test";
+            AddLog($"完整URL: {fullUrl}", LogType.Info);
+            
+            var fullResponse = await client.GetAsync(fullUrl);
+            AddLog($"完整URL响应状态: {(int)fullResponse.StatusCode} - {fullResponse.StatusCode}", LogType.Info);
+            
+        }
+        catch (Exception ex)
+        {
+            AddLog($"❌ HTTP客户端配置测试异常: {ex.Message}", LogType.Error);
+        }
+    }
+
+    /// <summary>
+    /// 测试获取用户偏好
+    /// </summary>
+    private async Task TestGetUserPreferences()
+    {
+        try
+        {
+            AddLog("开始测试获取用户偏好...", LogType.Info);
+            
+            var response = await Http.GetAsync("api/recommendations/preferences");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                AddLog($"✅ 获取用户偏好成功: {content}", LogType.Success);
+            }
+            else
+            {
+                AddLog($"❌ 获取用户偏好失败: {response.StatusCode} - {response.ReasonPhrase}", LogType.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            AddLog($"❌ 获取用户偏好异常: {ex.Message}", LogType.Error);
+        }
+    }
+
+    // 测试AI API超时和重试
+    private async Task TestAiApiTimeout()
+    {
+        AddLog("=== AI API超时和重试测试 ===", LogType.Info);
+        
+        try
+        {
+            var client = HttpClientFactory.CreateClient("CampusActivityAPI");
+            
+            var testRequest = new
+            {
+                message = "这是一个测试消息，用于验证AI API的超时和重试机制",
+                userId = "1"
+            };
+            
+            var json = System.Text.Json.JsonSerializer.Serialize(testRequest);
+            var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+            
+            AddLog("开始测试AI API调用...", LogType.Info);
+            var startTime = DateTime.Now;
+            
+            var response = await client.PostAsync("api/chat/send", content);
+            var endTime = DateTime.Now;
+            var duration = (endTime - startTime).TotalSeconds;
+            
+            AddLog($"AI API调用完成，耗时: {duration:F2}秒", LogType.Info);
+            AddLog($"响应状态: {(int)response.StatusCode} - {response.StatusCode}", LogType.Info);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var responseContent = await response.Content.ReadAsStringAsync();
+                AddLog($"AI响应成功，内容长度: {responseContent.Length}字符", LogType.Success);
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                AddLog($"AI API调用失败: {errorContent}", LogType.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            AddLog($"❌ AI API测试异常: {ex.Message}", LogType.Error);
+        }
     }
 } 
