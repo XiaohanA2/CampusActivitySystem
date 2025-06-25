@@ -9,7 +9,7 @@ Release/
 /x64/
 /x86/
 /Win32/
-/obj/
+**/obj/
 *.o
 *.obj
 *.so

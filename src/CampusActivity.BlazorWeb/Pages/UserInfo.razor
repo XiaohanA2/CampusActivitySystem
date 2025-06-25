@@ -38,10 +38,6 @@
                                         <td>@context.User.FindFirst(ClaimTypes.Role)?.Value</td>
                                     </tr>
                                     <tr>
-                                        <td><strong>认证类型:</strong></td>
-                                        <td>@context.User.Identity?.AuthenticationType</td>
-                                    </tr>
-                                    <tr>
                                         <td><strong>是否认证:</strong></td>
                                         <td>@context.User.Identity?.IsAuthenticated</td>
                                     </tr>
@@ -71,19 +67,6 @@
                                 </div>
                             </div>
 
-                            <div class="mb-3">
-                                <h5>JWT Token信息</h5>
-                                <div class="alert alert-info">
-                                    <small>
-                                        Token包含以下信息：<br/>
-                                        • NameIdentifier: 用户ID<br/>
-                                        • Name: 用户名<br/>
-                                        • Email: 邮箱<br/>
-                                        • Role: 角色<br/>
-                                        • FullName: 姓名（自定义claim）
-                                    </small>
-                                </div>
-                            </div>
                         </Authorized>
                         <NotAuthorized>
                             <div class="alert alert-warning">
