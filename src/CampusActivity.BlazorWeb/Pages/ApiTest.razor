@@ -771,18 +771,48 @@
     // 活动相关测试方法
     private async Task TestCreateActivityApi()
     {
-        var createActivityDto = new CreateActivityDto
+        // 首先检查用户角色
+        try
         {
-            Title = $"测试活动 {DateTime.Now:yyyy-MM-dd HH:mm}",
-            Description = "这是一个测试活动",
-            StartTime = DateTime.Now.AddDays(1),
-            EndTime = DateTime.Now.AddDays(1).AddHours(2),
-            RegistrationDeadline = DateTime.Now.AddHours(12),
-            Location = "测试地点",
-            MaxParticipants = 50,
-            CategoryId = 1
-        };
-        await TestSingleApi("POST", "api/activities", "创建活动", createActivityDto);
+            AddLog("检查创建活动权限...", LogType.Info);
+            var token = await AuthService.GetTokenAsync();
+            if (!string.IsNullOrEmpty(token))
+            {
+                var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
+                var jsonToken = handler.ReadJwtToken(token);
+                var roleClaim = jsonToken.Claims.FirstOrDefault(c => c.Type == "http://schemas.microsoft.com/ws/2008/06/identity/claims/role");
+                
+                if (roleClaim != null)
+                {
+                    var userRole = roleClaim.Value;
+                    AddLog($"当前用户角色: {userRole}", LogType.Info);
+                    
+                    if (userRole != "Teacher" && userRole != "Admin")
+                    {
+                        AddLog("❌ 创建活动需要Teacher或Admin角色权限", LogType.Warning);
+                        AddLog("提示: 请使用admin/admin123登录获取管理员权限", LogType.Info);
+                        return;
+                    }
+                }
+            }
+            
+            var createActivityDto = new CreateActivityDto
+            {
+                Title = $"测试活动 {DateTime.Now:yyyy-MM-dd HH:mm}",
+                Description = "这是一个测试活动",
+                StartTime = DateTime.Now.AddDays(1),
+                EndTime = DateTime.Now.AddDays(1).AddHours(2),
+                RegistrationDeadline = DateTime.Now.AddHours(12),
+                Location = "测试地点",
+                MaxParticipants = 50,
+                CategoryId = 1
+            };
+            await TestSingleApi("POST", "api/activities", "创建活动", createActivityDto);
+        }
+        catch (Exception ex)
+        {
+            AddLog($"❌ 创建活动测试失败: {ex.Message}", LogType.Error);
+        }
     }
 
     // 认证相关测试方法
@@ -806,11 +836,14 @@
         {
             AddLog("开始测试更新用户偏好...", LogType.Info);
             
+            var client = HttpClientFactory.CreateClient("CampusActivityAPI");
+            await SetAuthHeader(client);
+            
             var updateDto = new { CategoryId = 1, Weight = 0.8 };
             var json = JsonSerializer.Serialize(updateDto);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
             
-            var response = await Http.PostAsync("api/recommendations/preferences", content);
+            var response = await client.PostAsync("api/recommendations/preferences", content);
             
             if (response.IsSuccessStatusCode)
             {
@@ -819,7 +852,9 @@
             }
             else
             {
+                var responseContent = await response.Content.ReadAsStringAsync();
                 AddLog($"❌ 更新用户偏好失败: {response.StatusCode} - {response.ReasonPhrase}", LogType.Error);
+                AddLog($"响应内容: {responseContent}", LogType.Error);
             }
         }
         catch (Exception ex)
@@ -918,7 +953,10 @@
         {
             AddLog("开始测试重新计算推荐...", LogType.Info);
             
-            var response = await Http.PostAsync("api/recommendations/recalculate", null);
+            var client = HttpClientFactory.CreateClient("CampusActivityAPI");
+            await SetAuthHeader(client);
+            
+            var response = await client.PostAsync("api/recommendations/recalculate", null);
             
             if (response.IsSuccessStatusCode)
             {
@@ -927,7 +965,9 @@
             }
             else
             {
+                var responseContent = await response.Content.ReadAsStringAsync();
                 AddLog($"❌ 重新计算推荐失败: {response.StatusCode} - {response.ReasonPhrase}", LogType.Error);
+                AddLog($"响应内容: {responseContent}", LogType.Error);
             }
         }
         catch (Exception ex)
