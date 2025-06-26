@@ -250,7 +250,7 @@ static async Task SeedData(ApplicationDbContext context)
                     EndTime = DateTime.UtcNow.AddDays(7).AddHours(2),
                     RegistrationDeadline = DateTime.UtcNow.AddDays(5),
                     MaxParticipants = 100,
-                    CurrentParticipants = 0,
+                    CurrentParticipants = 35,
                     Status = CampusActivity.Shared.DTOs.ActivityStatus.Published,
                     CategoryId = categories.First(c => c.Name == "学术讲座").Id,
                     CreatedBy = adminUser.Id,
@@ -266,7 +266,7 @@ static async Task SeedData(ApplicationDbContext context)
                     EndTime = DateTime.UtcNow.AddDays(14).AddHours(3),
                     RegistrationDeadline = DateTime.UtcNow.AddDays(10),
                     MaxParticipants = 50,
-                    CurrentParticipants = 0,
+                    CurrentParticipants = 28,
                     Status = CampusActivity.Shared.DTOs.ActivityStatus.Published,
                     CategoryId = categories.First(c => c.Name == "文艺演出").Id,
                     CreatedBy = adminUser.Id,
@@ -282,7 +282,7 @@ static async Task SeedData(ApplicationDbContext context)
                     EndTime = DateTime.UtcNow.AddDays(3).AddHours(2),
                     RegistrationDeadline = DateTime.UtcNow.AddDays(1),
                     MaxParticipants = 20,
-                    CurrentParticipants = 0,
+                    CurrentParticipants = 12,
                     Status = CampusActivity.Shared.DTOs.ActivityStatus.Published,
                     CategoryId = categories.First(c => c.Name == "体育竞技").Id,
                     CreatedBy = adminUser.Id,
@@ -298,7 +298,7 @@ static async Task SeedData(ApplicationDbContext context)
                     EndTime = DateTime.UtcNow.AddDays(5).AddHours(4),
                     RegistrationDeadline = DateTime.UtcNow.AddDays(3),
                     MaxParticipants = 30,
-                    CurrentParticipants = 0,
+                    CurrentParticipants = 15,
                     Status = CampusActivity.Shared.DTOs.ActivityStatus.Published,
                     CategoryId = categories.First(c => c.Name == "社会实践").Id,
                     CreatedBy = adminUser.Id,
@@ -314,7 +314,7 @@ static async Task SeedData(ApplicationDbContext context)
                     EndTime = DateTime.UtcNow.AddDays(21).AddHours(6),
                     RegistrationDeadline = DateTime.UtcNow.AddDays(15),
                     MaxParticipants = 40,
-                    CurrentParticipants = 0,
+                    CurrentParticipants = 22,
                     Status = CampusActivity.Shared.DTOs.ActivityStatus.Published,
                     CategoryId = categories.First(c => c.Name == "创新创业").Id,
                     CreatedBy = adminUser.Id,
@@ -330,7 +330,7 @@ static async Task SeedData(ApplicationDbContext context)
                     EndTime = DateTime.UtcNow.AddDays(10).AddHours(3),
                     RegistrationDeadline = DateTime.UtcNow.AddDays(7),
                     MaxParticipants = 25,
-                    CurrentParticipants = 0,
+                    CurrentParticipants = 18,
                     Status = CampusActivity.Shared.DTOs.ActivityStatus.Published,
                     CategoryId = categories.First(c => c.Name == "交流参观").Id,
                     CreatedBy = adminUser.Id,
@@ -342,6 +342,95 @@ static async Task SeedData(ApplicationDbContext context)
             context.Activities.AddRange(activities);
             await context.SaveChangesAsync();
         }
+    }
+
+    // 添加一些测试用户
+    if (!context.Users.Any(u => u.Role != CampusActivity.Shared.DTOs.UserRole.Admin))
+    {
+        var testUsers = new[]
+        {
+            new CampusActivity.Domain.Entities.User
+            {
+                Username = "student1",
+                Email = "student1@campus.edu",
+                FullName = "张三",
+                Role = CampusActivity.Shared.DTOs.UserRole.Student,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword("123456"),
+                IsActive = true,
+                StudentId = "2021001",
+                Major = "计算机科学与技术",
+                CreatedAt = DateTime.UtcNow
+            },
+            new CampusActivity.Domain.Entities.User
+            {
+                Username = "student2",
+                Email = "student2@campus.edu",
+                FullName = "李四",
+                Role = CampusActivity.Shared.DTOs.UserRole.Student,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword("123456"),
+                IsActive = true,
+                StudentId = "2021002",
+                Major = "软件工程",
+                CreatedAt = DateTime.UtcNow
+            },
+            new CampusActivity.Domain.Entities.User
+            {
+                Username = "teacher1",
+                Email = "teacher1@campus.edu",
+                FullName = "王老师",
+                Role = CampusActivity.Shared.DTOs.UserRole.Teacher,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword("123456"),
+                IsActive = true,
+                EmployeeId = "T001",
+                Department = "计算机学院",
+                CreatedAt = DateTime.UtcNow
+            }
+        };
+
+        context.Users.AddRange(testUsers);
+        await context.SaveChangesAsync();
+
+        // 添加一些用户偏好设置
+        var categories = context.ActivityCategories.ToList();
+        var student1 = testUsers[0];
+        var student2 = testUsers[1];
+
+        var preferences = new[]
+        {
+            // 学生1偏好学术讲座和创新创业
+            new CampusActivity.Domain.Entities.UserActivityPreference
+            {
+                UserId = student1.Id,
+                CategoryId = categories.First(c => c.Name == "学术讲座").Id,
+                Weight = 0.8,
+                LastUpdated = DateTime.UtcNow
+            },
+            new CampusActivity.Domain.Entities.UserActivityPreference
+            {
+                UserId = student1.Id,
+                CategoryId = categories.First(c => c.Name == "创新创业").Id,
+                Weight = 0.7,
+                LastUpdated = DateTime.UtcNow
+            },
+            // 学生2偏好文艺演出和体育竞技
+            new CampusActivity.Domain.Entities.UserActivityPreference
+            {
+                UserId = student2.Id,
+                CategoryId = categories.First(c => c.Name == "文艺演出").Id,
+                Weight = 0.9,
+                LastUpdated = DateTime.UtcNow
+            },
+            new CampusActivity.Domain.Entities.UserActivityPreference
+            {
+                UserId = student2.Id,
+                CategoryId = categories.First(c => c.Name == "体育竞技").Id,
+                Weight = 0.6,
+                LastUpdated = DateTime.UtcNow
+            }
+        };
+
+        context.UserActivityPreferences.AddRange(preferences);
+        await context.SaveChangesAsync();
     }
 }
 

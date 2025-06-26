@@ -362,6 +362,17 @@
                             </div>
                         </div>
 
+                        <div class="mb-3">
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-sm btn-outline-info" @onclick="SelectAllFilters">
+                                    <i class="oi oi-check"></i> 全选条件
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-warning" @onclick="ClearAllFilters">
+                                    <i class="oi oi-x"></i> 清除条件
+                                </button>
+                            </div>
+                        </div>
+
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" @onclick="ResetFilter">重置</button>
                             <button type="button" class="btn btn-outline-secondary" @onclick="CloseFilterModal">取消</button>
@@ -537,6 +548,27 @@
         };
         CloseFilterModal();
         await LoadScheduleItems();
+    }
+
+    private void SelectAllFilters()
+    {
+        filterDto.Type = ScheduleItemType.Personal; // 默认选择第一个类型
+        filterDto.Priority = ScheduleItemPriority.High; // 默认选择高优先级
+        filterDto.IsCompleted = false; // 默认选择未完成
+        if (!filterDto.StartDate.HasValue)
+            filterDto.StartDate = DateTime.Today;
+        if (!filterDto.EndDate.HasValue)
+            filterDto.EndDate = DateTime.Today.AddDays(7);
+    }
+
+    private void ClearAllFilters()
+    {
+        filterDto.StartDate = null;
+        filterDto.EndDate = null;
+        filterDto.Type = null;
+        filterDto.Priority = null;
+        filterDto.IsCompleted = null;
+        filterDto.Keyword = null;
     }
 
     private async Task SaveItem()

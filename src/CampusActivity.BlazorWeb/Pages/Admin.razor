@@ -1,0 +1,322 @@
+@page "/admin"
+@using CampusActivity.BlazorWeb.Services
+@using CampusActivity.Shared.DTOs
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@attribute [Authorize(Roles = "Admin")]
+@inject IAdminService AdminService
+@inject IJSRuntime JSRuntime
+
+<PageTitle>系统管理 - 校园活动系统</PageTitle>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0">
+                    <i class="oi oi-cog"></i> 系统管理仪表板
+                </h2>
+                <div class="btn-group">
+                    <button class="btn btn-outline-primary" @onclick="RefreshStatistics">
+                        <i class="oi oi-reload"></i> 刷新数据
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">加载中...</span>
+            </div>
+            <p class="mt-2">正在加载统计信息...</p>
+        </div>
+    }
+    else
+    {
+        <!-- 统计卡片 -->
+        <div class="row mb-4">
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-primary shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                    总用户数
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">@statistics.BasicStatistics.TotalUsers</div>
+                                <div class="text-xs text-muted">活跃用户: @statistics.BasicStatistics.ActiveUsers</div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="oi oi-people fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-success shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                    活动总数
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">@statistics.BasicStatistics.TotalActivities</div>
+                                <div class="text-xs text-muted">已发布: @statistics.BasicStatistics.PublishedActivities</div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="oi oi-calendar fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-info shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                    报名总数
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">@statistics.BasicStatistics.TotalRegistrations</div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="oi oi-list-rich fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-warning shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                    最近30天新用户
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">@statistics.RecentStatistics.NewUsersLast30Days</div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="oi oi-plus fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 快捷操作 -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">快捷操作</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                <a href="/admin/users" class="btn btn-outline-primary btn-block">
+                                    <i class="oi oi-people"></i><br>
+                                    用户管理
+                                </a>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <a href="/admin/activities" class="btn btn-outline-success btn-block">
+                                    <i class="oi oi-calendar"></i><br>
+                                    活动管理
+                                </a>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <a href="/activities/create" class="btn btn-outline-info btn-block">
+                                    <i class="oi oi-plus"></i><br>
+                                    创建活动
+                                </a>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <button class="btn btn-outline-warning btn-block" @onclick="ExportData">
+                                    <i class="oi oi-data-transfer-download"></i><br>
+                                    导出数据
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- 用户角色分布 -->
+            <div class="col-xl-4 col-lg-6 mb-4">
+                <div class="card shadow">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">用户角色分布</h6>
+                    </div>
+                    <div class="card-body">
+                        @foreach (var role in statistics.UserRoleDistribution)
+                        {
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="text-sm">@GetRoleName(role.Role)</span>
+                                <span class="badge badge-primary">@role.Count</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- 热门活动 -->
+            <div class="col-xl-8 col-lg-6 mb-4">
+                <div class="card shadow">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">热门活动 Top 5</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>活动名称</th>
+                                        <th>开始时间</th>
+                                        <th>报名人数</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var activity in statistics.PopularActivities.Take(5))
+                                    {
+                                        <tr>
+                                            <td>
+                                                <a href="/activities/@activity.Id" class="text-decoration-none">
+                                                    @activity.Title
+                                                </a>
+                                            </td>
+                                            <td>@activity.StartTime.ToString("MM-dd HH:mm")</td>
+                                            <td>
+                                                <span class="badge badge-success">@activity.RegistrationCount</span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 活动分类统计 -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card shadow">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">活动分类统计</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            @foreach (var category in statistics.CategoryStatistics)
+                            {
+                                <div class="col-md-3 mb-3">
+                                    <div class="card border-left-secondary">
+                                        <div class="card-body py-2">
+                                            <div class="d-flex justify-content-between">
+                                                <span class="text-sm">@category.Category</span>
+                                                <span class="badge badge-secondary">@category.Count</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    .border-left-primary {
+        border-left: 0.25rem solid #4e73df !important;
+    }
+    .border-left-success {
+        border-left: 0.25rem solid #1cc88a !important;
+    }
+    .border-left-info {
+        border-left: 0.25rem solid #36b9cc !important;
+    }
+    .border-left-warning {
+        border-left: 0.25rem solid #f6c23e !important;
+    }
+    .border-left-secondary {
+        border-left: 0.25rem solid #858796 !important;
+    }
+    .text-gray-800 {
+        color: #5a5c69 !important;
+    }
+    .text-gray-300 {
+        color: #dddfeb !important;
+    }
+    .fa-2x {
+        font-size: 2em;
+    }
+    .btn-block {
+        width: 100%;
+        padding: 1rem;
+        height: auto;
+    }
+</style>
+
+@code {
+    private SystemStatisticsDto statistics = new();
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadStatistics();
+    }
+
+    private async Task LoadStatistics()
+    {
+        isLoading = true;
+        try
+        {
+            statistics = await AdminService.GetSystemStatisticsAsync();
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"加载统计信息失败: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task RefreshStatistics()
+    {
+        await LoadStatistics();
+        await JSRuntime.InvokeVoidAsync("alert", "数据已刷新");
+    }
+
+    private async Task ExportData()
+    {
+        await JSRuntime.InvokeVoidAsync("alert", "数据导出功能开发中...");
+    }
+
+    private string GetRoleName(string role)
+    {
+        return role switch
+        {
+            "Student" => "学生",
+            "Teacher" => "教师",
+            "Admin" => "管理员",
+            _ => role
+        };
+    }
+} 

@@ -37,12 +37,39 @@ public class RecommendationService : IRecommendationService
         try
         {
             var cacheKey = string.Format(AppConstants.CacheKeys.RecommendedActivities, userId);
-            var cachedRecommendations = await _cache.GetStringAsync(cacheKey);
+            string? cachedRecommendations = null;
+            
+            try
+            {
+                cachedRecommendations = await _cache.GetStringAsync(cacheKey);
+            }
+            catch (Exception cacheEx)
+            {
+                _logger.LogWarning(cacheEx, "缓存访问失败，直接计算推荐");
+            }
 
             if (!string.IsNullOrEmpty(cachedRecommendations))
             {
-                var cached = JsonSerializer.Deserialize<IEnumerable<ActivityDto>>(cachedRecommendations);
-                return cached?.Take(count) ?? Enumerable.Empty<ActivityDto>();
+                try
+                {
+                    var cached = JsonSerializer.Deserialize<IEnumerable<ActivityDto>>(cachedRecommendations);
+                    if (cached != null && cached.Any())
+                    {
+                        return cached.Take(count);
+                    }
+                }
+                catch (Exception deserializeEx)
+                {
+                    _logger.LogWarning(deserializeEx, "缓存数据反序列化失败，重新计算");
+                }
+            }
+
+            // 验证用户是否存在
+            var user = await _unitOfWork.Users.GetByIdAsync(userId);
+            if (user == null)
+            {
+                _logger.LogWarning("用户不存在，用户ID: {UserId}", userId);
+                return Enumerable.Empty<ActivityDto>();
             }
 
             // 获取用户偏好
@@ -51,27 +78,57 @@ public class RecommendationService : IRecommendationService
             // 获取可推荐的活动
             var activities = await _unitOfWork.Activities.FindAsync(a => 
                 a.Status == ActivityStatus.Published && 
-                a.RegistrationDeadline > DateTime.UtcNow);
+                a.RegistrationDeadline > DateTime.UtcNow &&
+                a.StartTime > DateTime.UtcNow);
+
+            if (!activities.Any())
+            {
+                _logger.LogInformation("没有可推荐的活动");
+                return Enumerable.Empty<ActivityDto>();
+            }
 
             // 获取用户已报名的活动
             var userRegistrations = await _unitOfWork.ActivityRegistrations.FindAsync(r => 
                 r.UserId == userId && r.Status == RegistrationStatus.Registered);
-            var registeredActivityIds = userRegistrations.Select(r => r.ActivityId).ToList();
+            var registeredActivityIds = userRegistrations.Select(r => r.ActivityId).ToHashSet();
 
-            var recommendedActivities = new List<ActivityDto>();
+            // 过滤掉已报名的活动
+            var availableActivities = activities.Where(a => !registeredActivityIds.Contains(a.Id));
 
-            // 由于C++/CLI模块在开发环境中可能还没有完全配置，我们先使用C#实现基础推荐逻辑
-            // 在生产环境中，这里应该调用C++/CLI推荐引擎
-            var recommendations = await CalculateBasicRecommendations(userId, activities, userPreferences, registeredActivityIds);
-            
-            recommendedActivities = recommendations.Take(count).ToList();
+            List<ActivityDto> recommendedActivities;
+
+            // 如果用户有偏好设置，使用个性化推荐
+            if (userPreferences.Any())
+            {
+                var recommendations = await CalculateBasicRecommendations(userId, availableActivities, userPreferences, registeredActivityIds.ToList());
+                recommendedActivities = recommendations.Take(count).ToList();
+            }
+            else
+            {
+                // 如果没有偏好设置，推荐热门活动
+                var defaultRecommendations = availableActivities
+                    .OrderByDescending(a => a.CurrentParticipants)
+                    .ThenBy(a => Math.Abs((a.StartTime - DateTime.UtcNow).TotalDays))
+                    .Take(count);
+                recommendedActivities = _mapper.Map<List<ActivityDto>>(defaultRecommendations);
+            }
 
             // 缓存结果
-            var serializedRecommendations = JsonSerializer.Serialize(recommendedActivities);
-            await _cache.SetStringAsync(cacheKey, serializedRecommendations, new DistributedCacheEntryOptions
+            try
             {
-                AbsoluteExpirationRelativeToNow = AppConstants.CacheExpiration.Medium
-            });
+                var serializedRecommendations = JsonSerializer.Serialize(recommendedActivities, new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                });
+                await _cache.SetStringAsync(cacheKey, serializedRecommendations, new DistributedCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = AppConstants.CacheExpiration.Medium
+                });
+            }
+            catch (Exception cacheEx)
+            {
+                _logger.LogWarning(cacheEx, "缓存设置失败");
+            }
 
             return recommendedActivities;
         }
@@ -86,22 +143,69 @@ public class RecommendationService : IRecommendationService
     {
         try
         {
+            // 验证用户是否存在
+            var user = await _unitOfWork.Users.GetByIdAsync(userId);
+            if (user == null)
+            {
+                _logger.LogWarning("用户不存在，用户ID: {UserId}", userId);
+                return Enumerable.Empty<ActivityDto>();
+            }
+
             // 协同过滤推荐实现
             var userRegistrations = await _unitOfWork.ActivityRegistrations.FindAsync(r => 
                 r.UserId == userId && r.Status == RegistrationStatus.Registered);
             var userActivityIds = userRegistrations.Select(r => r.ActivityId).ToHashSet();
 
+            // 如果用户没有报名过任何活动，返回热门活动
+            if (!userActivityIds.Any())
+            {
+                _logger.LogInformation("用户没有报名记录，返回热门活动，用户ID: {UserId}", userId);
+                var popularActivities = await _unitOfWork.Activities.FindAsync(a => 
+                    a.Status == ActivityStatus.Published && 
+                    a.RegistrationDeadline > DateTime.UtcNow &&
+                    a.StartTime > DateTime.UtcNow);
+
+                var popular = popularActivities
+                    .OrderByDescending(a => a.CurrentParticipants)
+                    .Take(count);
+                
+                return _mapper.Map<IEnumerable<ActivityDto>>(popular);
+            }
+
             // 找到有相似活动偏好的用户
             var allRegistrations = await _unitOfWork.ActivityRegistrations.FindAsync(r => 
                 r.Status == RegistrationStatus.Registered);
             
+            if (!allRegistrations.Any())
+            {
+                _logger.LogInformation("系统中没有任何报名记录");
+                return Enumerable.Empty<ActivityDto>();
+            }
+
             var similarUsers = FindSimilarUsers(userId, userActivityIds, allRegistrations);
             
+            if (!similarUsers.Any())
+            {
+                _logger.LogInformation("没有找到相似用户，用户ID: {UserId}", userId);
+                // 返回热门但用户未报名的活动
+                var unregisteredActivities = await _unitOfWork.Activities.FindAsync(a => 
+                    !userActivityIds.Contains(a.Id) &&
+                    a.Status == ActivityStatus.Published && 
+                    a.RegistrationDeadline > DateTime.UtcNow &&
+                    a.StartTime > DateTime.UtcNow);
+
+                var result = unregisteredActivities
+                    .OrderByDescending(a => a.CurrentParticipants)
+                    .Take(count);
+                
+                return _mapper.Map<IEnumerable<ActivityDto>>(result);
+            }
+
             // 基于相似用户推荐活动
-            var recommendedActivityIds = new List<int>();
+            var recommendedActivityIds = new HashSet<int>();
             foreach (var similarUserId in similarUsers.Take(10))
             {
-                var similarUserRegistrations = allRegistrations.Where(r => r.UserId == similarUserId.Key).ToList();
+                var similarUserRegistrations = allRegistrations.Where(r => r.UserId == similarUserId.Key);
                 foreach (var registration in similarUserRegistrations)
                 {
                     if (!userActivityIds.Contains(registration.ActivityId))
@@ -111,10 +215,17 @@ public class RecommendationService : IRecommendationService
                 }
             }
 
+            if (!recommendedActivityIds.Any())
+            {
+                _logger.LogInformation("没有找到推荐活动，用户ID: {UserId}", userId);
+                return Enumerable.Empty<ActivityDto>();
+            }
+
             var activities = await _unitOfWork.Activities.FindAsync(a => 
                 recommendedActivityIds.Contains(a.Id) && 
                 a.Status == ActivityStatus.Published && 
-                a.RegistrationDeadline > DateTime.UtcNow);
+                a.RegistrationDeadline > DateTime.UtcNow &&
+                a.StartTime > DateTime.UtcNow);
 
             var activityDtos = _mapper.Map<IEnumerable<ActivityDto>>(activities);
             return activityDtos.Take(count);
@@ -130,23 +241,61 @@ public class RecommendationService : IRecommendationService
     {
         try
         {
+            // 验证用户是否存在
+            var user = await _unitOfWork.Users.GetByIdAsync(userId);
+            if (user == null)
+            {
+                _logger.LogWarning("用户不存在，用户ID: {UserId}", userId);
+                return Enumerable.Empty<ActivityDto>();
+            }
+
             // 基于内容的推荐
             var userPreferences = await _unitOfWork.UserActivityPreferences.FindAsync(p => p.UserId == userId);
             var preferenceDict = userPreferences.ToDictionary(p => p.CategoryId, p => p.Weight);
 
             var activities = await _unitOfWork.Activities.FindAsync(a => 
                 a.Status == ActivityStatus.Published && 
-                a.RegistrationDeadline > DateTime.UtcNow);
+                a.RegistrationDeadline > DateTime.UtcNow &&
+                a.StartTime > DateTime.UtcNow);
 
-            var scoredActivities = activities.Select(a => new
+            if (!activities.Any())
             {
-                Activity = a,
-                Score = preferenceDict.ContainsKey(a.CategoryId) ? preferenceDict[a.CategoryId] : 0.0
-            })
-            .Where(x => x.Score > 0)
-            .OrderByDescending(x => x.Score)
-            .Take(count)
-            .Select(x => x.Activity);
+                _logger.LogInformation("没有可推荐的活动");
+                return Enumerable.Empty<ActivityDto>();
+            }
+
+            // 获取用户已报名的活动
+            var userRegistrations = await _unitOfWork.ActivityRegistrations.FindAsync(r => 
+                r.UserId == userId && r.Status == RegistrationStatus.Registered);
+            var registeredActivityIds = userRegistrations.Select(r => r.ActivityId).ToHashSet();
+
+            IEnumerable<Activity> scoredActivities;
+
+            if (preferenceDict.Any())
+            {
+                // 如果有偏好设置，基于偏好推荐
+                scoredActivities = activities
+                    .Where(a => !registeredActivityIds.Contains(a.Id))
+                    .Select(a => new
+                    {
+                        Activity = a,
+                        Score = preferenceDict.ContainsKey(a.CategoryId) ? preferenceDict[a.CategoryId] : 0.1
+                    })
+                    .OrderByDescending(x => x.Score)
+                    .ThenByDescending(x => x.Activity.CurrentParticipants)
+                    .Take(count)
+                    .Select(x => x.Activity);
+            }
+            else
+            {
+                // 如果没有偏好设置，返回热门活动
+                _logger.LogInformation("用户没有偏好设置，返回热门活动，用户ID: {UserId}", userId);
+                scoredActivities = activities
+                    .Where(a => !registeredActivityIds.Contains(a.Id))
+                    .OrderByDescending(a => a.CurrentParticipants)
+                    .ThenBy(a => Math.Abs((a.StartTime - DateTime.UtcNow).TotalDays))
+                    .Take(count);
+            }
 
             return _mapper.Map<IEnumerable<ActivityDto>>(scoredActivities);
         }
@@ -214,8 +363,8 @@ public class RecommendationService : IRecommendationService
         var cacheKey = string.Format(AppConstants.CacheKeys.RecommendedActivities, userId);
         await _cache.RemoveAsync(cacheKey);
 
-        // 预热缓存 - 不需要await，因为返回的是IEnumerable
-        _ = GetRecommendedActivitiesAsync(userId);
+        // 预热缓存
+        _ = await GetRecommendedActivitiesAsync(userId);
     }
 
     private async Task<IEnumerable<ActivityDto>> CalculateBasicRecommendations(
@@ -240,6 +389,11 @@ public class RecommendationService : IRecommendationService
             {
                 score += preferenceDict[activity.CategoryId] * 0.4;
             }
+            else
+            {
+                // 如果没有偏好设置，给予基础分数
+                score += 0.1;
+            }
 
             // 活动热度分数
             double popularityScore = CalculatePopularityScore(activity);
@@ -247,17 +401,40 @@ public class RecommendationService : IRecommendationService
 
             // 时间衰减因子
             double timeDecay = CalculateTimeDecayFactor(activity.StartTime);
-            score *= timeDecay;
+            score += timeDecay * 0.3;
 
-            if (score > AppConstants.Recommendation.MinRecommendationScore)
+            // 报名比例分数（避免除零错误）
+            if (activity.MaxParticipants > 0)
             {
-                scoredActivities.Add((activity, score));
+                double fillRate = (double)activity.CurrentParticipants / activity.MaxParticipants;
+                // 适中的报名比例更受欢迎（0.3-0.7之间）
+                if (fillRate >= 0.3 && fillRate <= 0.7)
+                {
+                    score += 0.2;
+                }
+                else if (fillRate < 0.9) // 避免推荐快满的活动
+                {
+                    score += 0.1;
+                }
             }
+            else
+            {
+                score += 0.1; // 无限制活动给予基础分数
+            }
+
+            scoredActivities.Add((activity, score));
         }
 
-        var topActivities = scoredActivities
+        // 如果没有足够的活动满足最小分数要求，降低阈值
+        var validActivities = scoredActivities.Where(x => x.score > 0.1);
+        if (!validActivities.Any())
+        {
+            validActivities = scoredActivities; // 返回所有活动
+        }
+
+        var topActivities = validActivities
             .OrderByDescending(x => x.score)
-            .Take(AppConstants.Recommendation.MaxRecommendedActivities)
+            .Take(20) // 取前20个而不是使用常量
             .Select(x => x.activity);
 
         return _mapper.Map<IEnumerable<ActivityDto>>(topActivities);

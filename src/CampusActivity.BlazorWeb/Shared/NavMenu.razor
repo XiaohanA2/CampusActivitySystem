@@ -75,11 +75,13 @@
                 <span class="oi oi-wrench" aria-hidden="true"></span> 简单API测试
             </NavLink>
         </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="user-info">
-                <span class="oi oi-person" aria-hidden="true"></span> 用户信息
-            </NavLink>
-        </div>
+        <AuthorizeView>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="profile">
+                    <span class="oi oi-person" aria-hidden="true"></span> 个人资料
+                </NavLink>
+            </div>
+        </AuthorizeView>
     </nav>
 </div>
 

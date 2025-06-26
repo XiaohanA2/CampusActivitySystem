@@ -18,54 +18,146 @@
     }
     else if (activity != null)
     {
+        <!-- 活动头部横幅 -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card border-0 shadow-lg overflow-hidden">
+                    @if (!string.IsNullOrEmpty(activity.ImageUrl))
+                    {
+                        <div class="position-relative">
+                            <img src="@activity.ImageUrl" class="card-img-top" alt="@activity.Title" style="height: 300px; object-fit: cover;">
+                            <div class="position-absolute top-0 start-0 w-100 h-100" style="background: linear-gradient(45deg, rgba(0,0,0,0.7), rgba(0,0,0,0.3));"></div>
+                            <div class="position-absolute bottom-0 start-0 p-4 text-white">
+                                <h1 class="display-4 fw-bold mb-2">@activity.Title</h1>
+                                <p class="lead mb-0">@activity.CategoryName</p>
+                            </div>
+                            <div class="position-absolute top-0 end-0 p-3">
+                                <span class="badge @GetStatusBadgeClass(activity.Status) fs-6">
+                                    @GetStatusDisplayName(activity.Status)
+                                </span>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="card-header bg-primary text-white p-4">
+                            <h1 class="display-4 fw-bold mb-2">@activity.Title</h1>
+                            <p class="lead mb-0">@activity.CategoryName</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
         <div class="row">
             <!-- 活动详情 -->
             <div class="col-md-8">
-                <div class="card">
-                    <div class="card-header">
-                        <h3>@activity.Title</h3>
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-light">
+                        <h4 class="mb-0"><i class="oi oi-document text-primary me-2"></i>活动详情</h4>
                     </div>
                     <div class="card-body">
-                        @if (!string.IsNullOrEmpty(activity.ImageUrl))
-                        {
-                            <img src="@activity.ImageUrl" class="img-fluid mb-3" alt="@activity.Title" />
-                        }
                         
-                        <div class="mb-3">
-                            <h5>活动描述</h5>
-                            <p>@activity.Description</p>
+                        <div class="mb-4">
+                            <h5 class="text-primary mb-3"><i class="oi oi-book-open me-2"></i>活动描述</h5>
+                            <div class="p-3 bg-light rounded">
+                                <p class="mb-0 lh-lg">@activity.Description</p>
+                            </div>
                         </div>
 
-                        <div class="row">
+                        <!-- 活动信息卡片网格 -->
+                        <div class="row g-3 mb-4">
                             <div class="col-md-6">
-                                <h5>活动信息</h5>
-                                <ul class="list-unstyled">
-                                    <li><i class="oi oi-calendar"></i> <strong>开始时间:</strong> @activity.StartTime.ToString("yyyy-MM-dd HH:mm")</li>
-                                    <li><i class="oi oi-calendar"></i> <strong>结束时间:</strong> @activity.EndTime.ToString("yyyy-MM-dd HH:mm")</li>
-                                    <li><i class="oi oi-location"></i> <strong>地点:</strong> @activity.Location</li>
-                                    <li><i class="oi oi-people"></i> <strong>参与人数:</strong> @activity.CurrentParticipants/@activity.MaxParticipants</li>
-                                    <li><i class="oi oi-tag"></i> <strong>分类:</strong> @activity.CategoryName</li>
-                                    <li><i class="oi oi-person"></i> <strong>创建者:</strong> @activity.CreatedByName</li>
-                                </ul>
+                                <div class="card h-100 border-start border-primary border-4">
+                                    <div class="card-body">
+                                        <h6 class="card-title text-primary mb-3">
+                                            <i class="oi oi-calendar me-2"></i>时间安排
+                                        </h6>
+                                        <div class="d-flex align-items-center mb-2">
+                                            <i class="oi oi-media-play text-success me-2"></i>
+                                            <small class="text-muted me-2">开始:</small>
+                                            <span class="fw-bold">@activity.StartTime.ToString("yyyy-MM-dd HH:mm")</span>
+                                        </div>
+                                        <div class="d-flex align-items-center mb-2">
+                                            <i class="oi oi-media-stop text-danger me-2"></i>
+                                            <small class="text-muted me-2">结束:</small>
+                                            <span class="fw-bold">@activity.EndTime.ToString("yyyy-MM-dd HH:mm")</span>
+                                        </div>
+                                        <div class="d-flex align-items-center">
+                                            <i class="oi oi-clock text-warning me-2"></i>
+                                            <small class="text-muted me-2">时长:</small>
+                                            <span class="fw-bold">@GetActivityDuration()</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                             <div class="col-md-6">
-                                <h5>报名信息</h5>
-                                <ul class="list-unstyled">
-                                    <li><i class="oi oi-clock"></i> <strong>报名截止:</strong> @activity.RegistrationDeadline.ToString("yyyy-MM-dd HH:mm")</li>
-                                    <li><i class="oi oi-calendar"></i> <strong>创建时间:</strong> @activity.CreatedAt.ToString("yyyy-MM-dd")</li>
-                                    <li><i class="oi oi-calendar"></i> <strong>更新时间:</strong> @activity.UpdatedAt.ToString("yyyy-MM-dd")</li>
-                                </ul>
+                                <div class="card h-100 border-start border-success border-4">
+                                    <div class="card-body">
+                                        <h6 class="card-title text-success mb-3">
+                                            <i class="oi oi-location me-2"></i>地点信息
+                                        </h6>
+                                        <div class="d-flex align-items-center mb-2">
+                                            <i class="oi oi-map-marker text-danger me-2"></i>
+                                            <span class="fw-bold">@activity.Location</span>
+                                        </div>
+                                        <div class="d-flex align-items-center mb-2">
+                                            <i class="oi oi-tag text-info me-2"></i>
+                                            <small class="text-muted me-2">分类:</small>
+                                            <span class="badge bg-info">@activity.CategoryName</span>
+                                        </div>
+                                        <div class="d-flex align-items-center">
+                                            <i class="oi oi-person text-primary me-2"></i>
+                                            <small class="text-muted me-2">主办:</small>
+                                            <span class="fw-bold">@activity.CreatedByName</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 参与情况 -->
+                        <div class="card border-start border-info border-4 mb-4">
+                            <div class="card-body">
+                                <h6 class="card-title text-info mb-3">
+                                    <i class="oi oi-people me-2"></i>参与情况
+                                </h6>
+                                <div class="row align-items-center">
+                                    <div class="col-md-8">
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span class="fw-bold">@activity.CurrentParticipants / @activity.MaxParticipants 人</span>
+                                            <span class="text-muted">@GetRegistrationProgress()%</span>
+                                        </div>
+                                        <div class="progress" style="height: 8px;">
+                                            <div class="progress-bar @GetParticipationProgressClass()" 
+                                                 role="progressbar" 
+                                                 style="width: @GetRegistrationProgress()%"
+                                                 aria-valuenow="@GetRegistrationProgress()" 
+                                                 aria-valuemin="0" 
+                                                 aria-valuemax="100">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 text-end">
+                                        <div class="text-muted small">剩余名额</div>
+                                        <div class="fs-4 fw-bold text-primary">@(activity.MaxParticipants - activity.CurrentParticipants)</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
                         @if (activity.Tags.Any())
                         {
-                            <div class="mb-3">
-                                <h5>活动标签</h5>
-                                @foreach (var tag in activity.Tags)
-                                {
-                                    <span class="badge bg-secondary me-1">@tag</span>
-                                }
+                            <div class="mb-4">
+                                <h5 class="text-primary mb-3"><i class="oi oi-tags me-2"></i>活动标签</h5>
+                                <div class="d-flex flex-wrap gap-2">
+                                    @foreach (var tag in activity.Tags)
+                                    {
+                                        <span class="badge bg-gradient bg-secondary fs-6 px-3 py-2">
+                                            <i class="oi oi-tag me-1"></i>@tag
+                                        </span>
+                                    }
+                                </div>
                             </div>
                         }
 
@@ -386,5 +478,36 @@
     {
         if (activity == null || activity.MaxParticipants == 0) return 0;
         return (int)((double)activity.CurrentParticipants / activity.MaxParticipants * 100);
+    }
+
+    private string GetActivityDuration()
+    {
+        if (activity == null) return "未知";
+        
+        var duration = activity.EndTime - activity.StartTime;
+        if (duration.TotalDays >= 1)
+        {
+            return $"{duration.Days}天{duration.Hours}小时";
+        }
+        else if (duration.TotalHours >= 1)
+        {
+            return $"{duration.Hours}小时{duration.Minutes}分钟";
+        }
+        else
+        {
+            return $"{duration.Minutes}分钟";
+        }
+    }
+
+    private string GetParticipationProgressClass()
+    {
+        var percentage = GetRegistrationProgress();
+        return percentage switch
+        {
+            >= 90 => "bg-danger",
+            >= 70 => "bg-warning", 
+            >= 50 => "bg-info",
+            _ => "bg-success"
+        };
     }
 } 

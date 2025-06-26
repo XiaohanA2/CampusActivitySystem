@@ -150,6 +150,11 @@ public class RecommendationsController : ControllerBase
         {
             return userId;
         }
+        
+        // 记录调试信息
+        _logger.LogWarning("无法获取用户ID，用户身份信息：{Claims}", 
+            string.Join(", ", User.Claims.Select(c => $"{c.Type}={c.Value}")));
+        
         throw new UnauthorizedAccessException("无效的用户身份");
     }
 }

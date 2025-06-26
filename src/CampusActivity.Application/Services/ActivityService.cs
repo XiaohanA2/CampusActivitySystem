@@ -483,23 +483,54 @@ public class ActivityService : IActivityService
             
             if (!string.IsNullOrEmpty(cachedActivities))
             {
-                return JsonSerializer.Deserialize<IEnumerable<ActivityDto>>(cachedActivities)!;
+                try
+                {
+                    var cached = JsonSerializer.Deserialize<IEnumerable<ActivityDto>>(cachedActivities);
+                    if (cached != null && cached.Any())
+                    {
+                        return cached;
+                    }
+                }
+                catch (Exception deserializeEx)
+                {
+                    _logger.LogWarning(deserializeEx, "缓存数据反序列化失败，重新查询");
+                }
             }
 
+            // 查询已发布且未过期的活动
             var activities = await _unitOfWork.Activities.FindAsync(a => 
-                a.Status == ActivityStatus.Published);
+                a.Status == ActivityStatus.Published && 
+                a.StartTime > DateTime.UtcNow);
             
+            if (!activities.Any())
+            {
+                _logger.LogInformation("没有找到符合条件的活动");
+                return new List<ActivityDto>();
+            }
+
+            // 计算热门度：参与人数 + 最近创建加权
             var popularActivities = activities
-                .OrderByDescending(a => a.CurrentParticipants)
-                .ThenByDescending(a => a.CreatedAt)
+                .Select(a => new
+                {
+                    Activity = a,
+                    PopularityScore = a.CurrentParticipants * 2.0 + 
+                                   (DateTime.UtcNow - a.CreatedAt).TotalDays < 7 ? 10 : 0 +
+                                   (a.MaxParticipants > 0 ? (double)a.CurrentParticipants / a.MaxParticipants * 100 : 0)
+                })
+                .OrderByDescending(x => x.PopularityScore)
+                .ThenByDescending(x => x.Activity.CreatedAt)
                 .Take(count)
+                .Select(x => x.Activity)
                 .ToList();
 
             var activityDtos = _mapper.Map<IEnumerable<ActivityDto>>(popularActivities);
 
             try
             {
-                var serializedActivities = JsonSerializer.Serialize(activityDtos);
+                var serializedActivities = JsonSerializer.Serialize(activityDtos, new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                });
                 await _cache.SetStringAsync(cacheKey, serializedActivities, new DistributedCacheEntryOptions
                 {
                     AbsoluteExpirationRelativeToNow = AppConstants.CacheExpiration.Medium
@@ -515,7 +546,8 @@ public class ActivityService : IActivityService
         catch (Exception ex)
         {
             _logger.LogError(ex, "获取热门活动失败");
-            throw;
+            // 不抛出异常，返回空列表以保证API稳定性
+            return new List<ActivityDto>();
         }
     }
 } 

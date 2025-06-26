@@ -8,15 +8,18 @@
             <h2>校园活动</h2>
             
             <!-- 搜索筛选区域 -->
-            <div class="card mb-4">
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="oi oi-magnifying-glass me-2"></i>活动筛选</h5>
+                </div>
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-4">
-                            <label class="form-label">关键词</label>
+                            <label class="form-label fw-bold">关键词</label>
                             <input type="text" class="form-control" @bind="searchDto.Keyword" placeholder="搜索活动标题或描述..." />
                         </div>
-                        <div class="col-md-3">
-                            <label class="form-label">活动分类</label>
+                        <div class="col-md-2">
+                            <label class="form-label fw-bold">活动分类</label>
                             <select class="form-select" @bind="searchDto.CategoryId">
                                 <option value="">全部分类</option>
                                 @if (categories != null)
@@ -28,28 +31,86 @@
                                 }
                             </select>
                         </div>
-                        <div class="col-md-3">
-                            <label class="form-label">开始日期</label>
+                        <div class="col-md-2">
+                            <label class="form-label fw-bold">开始日期</label>
                             <input type="date" class="form-control" @bind="searchDto.StartDate" />
                         </div>
                         <div class="col-md-2">
-                            <label class="form-label">&nbsp;</label>
-                            <div>
-                                <button class="btn btn-primary" @onclick="SearchActivities">搜索</button>
-                                <button class="btn btn-outline-secondary" @onclick="ClearSearch">清空</button>
-                            </div>
+                            <label class="form-label fw-bold">结束日期</label>
+                            <input type="date" class="form-control" @bind="searchDto.EndDate" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fw-bold">排序方式</label>
+                            <select class="form-select" @bind="searchDto.SortBy">
+                                <option value="StartTime">开始时间</option>
+                                <option value="CreatedAt">创建时间</option>
+                                <option value="Title">活动名称</option>
+                                <option value="CurrentParticipants">参与人数</option>
+                            </select>
                         </div>
                     </div>
-                    <div class="row mt-2">
+                    <div class="row mt-3">
                         <div class="col-md-3">
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" @bind="searchDto.IsRegisterable" id="isRegisterable">
-                                <label class="form-check-label" for="isRegisterable">
-                                    仅显示可报名活动
+                                <label class="form-check-label fw-bold" for="isRegisterable">
+                                    <i class="oi oi-check text-success me-1"></i>仅显示可报名活动
                                 </label>
                             </div>
                         </div>
+                        <div class="col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" @bind="showMyActivitiesOnly" id="showMyActivities">
+                                <label class="form-check-label fw-bold" for="showMyActivities">
+                                    <i class="oi oi-person text-info me-1"></i>仅显示我的活动
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="btn-group">
+                                <button class="btn btn-primary" @onclick="SearchActivities">
+                                    <i class="oi oi-magnifying-glass me-1"></i>搜索
+                                </button>
+                                <button class="btn btn-outline-secondary" @onclick="ClearSearch">
+                                    <i class="oi oi-x me-1"></i>清空
+                                </button>
+                                <button class="btn btn-outline-info" @onclick="ToggleAdvancedFilter">
+                                    <i class="oi oi-cog me-1"></i>@(showAdvancedFilter ? "隐藏" : "显示")高级筛选
+                                </button>
+                            </div>
+                        </div>
                     </div>
+                    
+                    @if (showAdvancedFilter)
+                    {
+                        <div class="row mt-3 pt-3 border-top">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">参与人数范围</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" @bind="minParticipants" placeholder="最少" min="0" />
+                                    <span class="input-group-text">-</span>
+                                    <input type="number" class="form-control" @bind="maxParticipants" placeholder="最多" min="0" />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">活动状态</label>
+                                <div class="d-flex gap-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="statusFilter" @onchange="() => SetStatusFilter(null)" checked="@(statusFilter == null)" id="statusAll">
+                                        <label class="form-check-label" for="statusAll">全部</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="statusFilter" @onchange="() => SetStatusFilter(0)" checked="@(statusFilter == 0)" id="statusDraft">
+                                        <label class="form-check-label" for="statusDraft">草稿</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="statusFilter" @onchange="() => SetStatusFilter(1)" checked="@(statusFilter == 1)" id="statusPublished">
+                                        <label class="form-check-label" for="statusPublished">已发布</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
                 </div>
             </div>
 
@@ -68,39 +129,74 @@
                     @foreach (var activity in activities.Items)
                     {
                         <div class="col-md-6 col-lg-4 mb-4">
-                            <div class="card h-100">
-                                <div class="card-body">
-                                    <h5 class="card-title">@activity.Title</h5>
-                                    <p class="card-text">@activity.Description</p>
-                                    <div class="small text-muted">
-                                        <div><i class="oi oi-calendar"></i> @activity.StartTime.ToString("yyyy-MM-dd HH:mm")</div>
-                                        <div><i class="oi oi-location"></i> @activity.Location</div>
-                                        <div><i class="oi oi-people"></i> @activity.CurrentParticipants/@activity.MaxParticipants 人</div>
-                                        <div><i class="oi oi-tag"></i> @activity.CategoryName</div>
-                                    </div>
-                                    <div class="mt-2">
-                                        @foreach (var tag in activity.Tags)
+                            <div class="card h-100 shadow-sm border-0" style="transition: all 0.3s ease;">
+                                @if (!string.IsNullOrEmpty(activity.ImageUrl))
+                                {
+                                    <img src="@activity.ImageUrl" class="card-img-top" alt="@activity.Title" style="height: 200px; object-fit: cover;">
+                                }
+                                <div class="card-body d-flex flex-column">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h5 class="card-title text-primary">@activity.Title</h5>
+                                        @if (activity.Status == ActivityStatus.Published && 
+                                             activity.RegistrationDeadline > DateTime.Now && 
+                                             activity.CurrentParticipants < activity.MaxParticipants)
                                         {
-                                            <span class="badge bg-secondary me-1">@tag</span>
+                                            <span class="badge bg-success">可报名</span>
+                                        }
+                                        else if (activity.CurrentParticipants >= activity.MaxParticipants)
+                                        {
+                                            <span class="badge bg-warning">已满员</span>
+                                        }
+                                        else if (activity.RegistrationDeadline <= DateTime.Now)
+                                        {
+                                            <span class="badge bg-danger">已截止</span>
                                         }
                                     </div>
+                                    
+                                    <p class="card-text text-muted">
+                                        @(activity.Description?.Length > 100 ? activity.Description.Substring(0, 100) + "..." : activity.Description)
+                                    </p>
+                                    
+                                    <div class="small mb-3">
+                                        <div class="mb-1"><i class="oi oi-calendar text-primary me-2"></i>@activity.StartTime.ToString("yyyy-MM-dd HH:mm")</div>
+                                        <div class="mb-1"><i class="oi oi-location text-success me-2"></i>@activity.Location</div>
+                                        <div class="mb-1">
+                                            <i class="oi oi-people text-info me-2"></i>
+                                            <span class="fw-bold">@activity.CurrentParticipants/@activity.MaxParticipants</span> 人
+                                            <div class="progress mt-1" style="height: 4px;">
+                                                <div class="progress-bar @GetParticipationProgressClass(activity)" 
+                                                     style="width: @GetParticipationPercentage(activity)%"></div>
+                                            </div>
+                                        </div>
+                                        <div><i class="oi oi-tag text-warning me-2"></i><span class="badge bg-light text-dark">@activity.CategoryName</span></div>
+                                    </div>
+                                    
+                                    @if (activity.Tags?.Any() == true)
+                                    {
+                                        <div class="mb-3">
+                                            @foreach (var tag in activity.Tags.Take(3))
+                                            {
+                                                <span class="badge bg-secondary me-1 mb-1">@tag</span>
+                                            }
+                                            @if (activity.Tags.Count() > 3)
+                                            {
+                                                <span class="badge bg-light text-dark">+@(activity.Tags.Count() - 3)</span>
+                                            }
+                                        </div>
+                                    }
+                                    
+                                    <div class="mt-auto">
+                                        <div class="d-grid">
+                                            <a href="/activities/@activity.Id" class="btn btn-primary">
+                                                <i class="oi oi-eye me-1"></i>查看详情
+                                            </a>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="card-footer">
-                                    <a href="/activities/@activity.Id" class="btn btn-primary">查看详情</a>
-                                    @if (activity.Status == ActivityStatus.Published && 
-                                         activity.RegistrationDeadline > DateTime.Now && 
-                                         activity.CurrentParticipants < activity.MaxParticipants)
-                                    {
-                                        <span class="badge bg-success ms-2">可报名</span>
-                                    }
-                                    else if (activity.CurrentParticipants >= activity.MaxParticipants)
-                                    {
-                                        <span class="badge bg-warning ms-2">已满员</span>
-                                    }
-                                    else if (activity.RegistrationDeadline <= DateTime.Now)
-                                    {
-                                        <span class="badge bg-danger ms-2">已截止</span>
-                                    }
+                                <div class="card-footer bg-transparent border-top-0">
+                                    <small class="text-muted">
+                                        <i class="oi oi-clock me-1"></i>报名截止: @activity.RegistrationDeadline.ToString("MM-dd HH:mm")
+                                    </small>
                                 </div>
                             </div>
                         </div>
@@ -151,6 +247,13 @@
     private ActivitySearchDto searchDto = new() { PageIndex = 1, PageSize = 12, SortBy = "StartTime" };
     private bool isLoading = false;
     private int totalPages => activities != null ? (int)Math.Ceiling((double)activities.TotalCount / searchDto.PageSize) : 0;
+    
+    // 新增的筛选相关变量
+    private bool showAdvancedFilter = false;
+    private bool showMyActivitiesOnly = false;
+    private int? minParticipants;
+    private int? maxParticipants;
+    private int? statusFilter;
 
     [Inject] private IActivityService ActivityService { get; set; } = default!;
 
@@ -198,6 +301,10 @@
     private async Task ClearSearch()
     {
         searchDto = new ActivitySearchDto { PageIndex = 1, PageSize = 12, SortBy = "StartTime" };
+        showMyActivitiesOnly = false;
+        minParticipants = null;
+        maxParticipants = null;
+        statusFilter = null;
         await LoadActivities();
     }
 
@@ -205,5 +312,33 @@
     {
         searchDto.PageIndex = pageNumber;
         await LoadActivities();
+    }
+
+    private void ToggleAdvancedFilter()
+    {
+        showAdvancedFilter = !showAdvancedFilter;
+    }
+
+    private void SetStatusFilter(int? status)
+    {
+        statusFilter = status;
+    }
+
+    private string GetParticipationProgressClass(ActivityDto activity)
+    {
+        var percentage = GetParticipationPercentage(activity);
+        return percentage switch
+        {
+            >= 90 => "bg-danger",
+            >= 70 => "bg-warning",
+            >= 50 => "bg-info",
+            _ => "bg-success"
+        };
+    }
+
+    private double GetParticipationPercentage(ActivityDto activity)
+    {
+        if (activity.MaxParticipants == 0) return 0;
+        return Math.Round((double)activity.CurrentParticipants / activity.MaxParticipants * 100, 1);
     }
 } 
