@@ -41,11 +41,17 @@
                         </div>
                         <div class="col-md-2">
                             <label class="form-label fw-bold">排序方式</label>
-                            <select class="form-select" @bind="searchDto.SortBy">
-                                <option value="StartTime">开始时间</option>
-                                <option value="CreatedAt">创建时间</option>
-                                <option value="Title">活动名称</option>
-                                <option value="CurrentParticipants">参与人数</option>
+                            <select class="form-select" @bind="searchDto.SortBy" @bind:after="OnSortChanged">
+                                <option value="StartTime">开始时间 ↑</option>
+                                <option value="StartTime-desc">开始时间 ↓</option>
+                                <option value="CreatedAt-desc">发布时间 ↓</option>
+                                <option value="CreatedAt">发布时间 ↑</option>
+                                <option value="Recommended">智能推荐</option>
+                                <option value="Popularity">热度排序</option>
+                                <option value="CurrentParticipants-desc">参与人数 ↓</option>
+                                <option value="CurrentParticipants">参与人数 ↑</option>
+                                <option value="Title">活动名称 A-Z</option>
+                                <option value="Title-desc">活动名称 Z-A</option>
                             </select>
                         </div>
                     </div>
@@ -208,26 +214,26 @@
                 {
                     <nav aria-label="活动分页">
                         <ul class="pagination justify-content-center">
-                            <li class="page-item @(searchDto.PageIndex <= 1 ? "disabled" : "")">
-                                <button class="page-link" @onclick="() => GoToPage(searchDto.PageIndex - 1)">上一页</button>
+                            <li class="page-item @(searchDto.Page <= 1 ? "disabled" : "")">
+                                <button class="page-link" @onclick="() => GoToPage(searchDto.Page - 1)">上一页</button>
                             </li>
                             
-                            @for (int i = Math.Max(1, searchDto.PageIndex - 2); i <= Math.Min(totalPages, searchDto.PageIndex + 2); i++)
+                            @for (int i = Math.Max(1, searchDto.Page - 2); i <= Math.Min(totalPages, searchDto.Page + 2); i++)
                             {
                                 int pageNumber = i;
-                                <li class="page-item @(searchDto.PageIndex == pageNumber ? "active" : "")">
+                                <li class="page-item @(searchDto.Page == pageNumber ? "active" : "")">
                                     <button class="page-link" @onclick="() => GoToPage(pageNumber)">@pageNumber</button>
                                 </li>
                             }
                             
-                            <li class="page-item @(searchDto.PageIndex >= totalPages ? "disabled" : "")">
-                                <button class="page-link" @onclick="() => GoToPage(searchDto.PageIndex + 1)">下一页</button>
+                            <li class="page-item @(searchDto.Page >= totalPages ? "disabled" : "")">
+                                <button class="page-link" @onclick="() => GoToPage(searchDto.Page + 1)">下一页</button>
                             </li>
                         </ul>
                     </nav>
                     
                     <div class="text-center text-muted">
-                        共 @activities.TotalCount 个活动，第 @searchDto.PageIndex/@totalPages 页
+                        共 @activities.TotalCount 个活动，第 @searchDto.Page/@totalPages 页
                     </div>
                 }
             }
@@ -244,7 +250,7 @@
 @code {
     private PagedResultDto<ActivityDto>? activities;
     private IEnumerable<ActivityCategoryDto>? categories;
-    private ActivitySearchDto searchDto = new() { PageIndex = 1, PageSize = 12, SortBy = "StartTime" };
+    private ActivitySearchDto searchDto = new() { Page = 1, PageSize = 12, SortBy = "StartTime" };
     private bool isLoading = false;
     private int totalPages => activities != null ? (int)Math.Ceiling((double)activities.TotalCount / searchDto.PageSize) : 0;
     
@@ -294,13 +300,13 @@
 
     private async Task SearchActivities()
     {
-        searchDto.PageIndex = 1;
+        searchDto.Page = 1;
         await LoadActivities();
     }
 
     private async Task ClearSearch()
     {
-        searchDto = new ActivitySearchDto { PageIndex = 1, PageSize = 12, SortBy = "StartTime" };
+        searchDto = new ActivitySearchDto { Page = 1, PageSize = 12, SortBy = "StartTime" };
         showMyActivitiesOnly = false;
         minParticipants = null;
         maxParticipants = null;
@@ -310,7 +316,7 @@
 
     private async Task GoToPage(int pageNumber)
     {
-        searchDto.PageIndex = pageNumber;
+        searchDto.Page = pageNumber;
         await LoadActivities();
     }
 
@@ -340,5 +346,23 @@
     {
         if (activity.MaxParticipants == 0) return 0;
         return Math.Round((double)activity.CurrentParticipants / activity.MaxParticipants * 100, 1);
+    }
+
+    private async Task OnSortChanged()
+    {
+        // 解析排序字段和方向
+        string sortBy = searchDto.SortBy;
+        if (sortBy.EndsWith("-desc"))
+        {
+            searchDto.SortBy = sortBy.Replace("-desc", "");
+            searchDto.SortDescending = true;
+        }
+        else
+        {
+            searchDto.SortDescending = false;
+        }
+        
+        // 自动触发搜索
+        await SearchActivities();
     }
 } 

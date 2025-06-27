@@ -16,9 +16,12 @@ public interface IAdminService
     Task<bool> UpdateActivityAsync(AdminActivityDto activity);
     Task<bool> CreateActivityAsync(AdminActivityDto activity);
     Task<bool> ForceDeleteActivityAsync(int id);
+    Task<bool> DeleteActivityAsync(int activityId);
+    Task<IEnumerable<ActivityCategoryDto>> GetCategoriesAsync();
 
     // 系统统计
     Task<SystemStatisticsDto> GetSystemStatisticsAsync();
+    Task SeedActivityImagesAsync();
 }
 
 public class PagedResult<T>

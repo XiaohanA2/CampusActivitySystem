@@ -7,6 +7,8 @@ using CampusActivity.Infrastructure.UnitOfWork;
 using CampusActivity.Shared.DTOs;
 using CampusActivity.Shared.Constants;
 using CampusActivity.Shared.Enums;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Http;
 
 namespace CampusActivity.Application.Services;
 
@@ -16,23 +18,45 @@ public class ActivityService : IActivityService
     private readonly IMapper _mapper;
     private readonly ILogger<ActivityService> _logger;
     private readonly IDistributedCache _cache;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
     public ActivityService(
         IUnitOfWork unitOfWork,
         IMapper mapper,
         ILogger<ActivityService> logger,
-        IDistributedCache cache)
+        IDistributedCache cache,
+        IHttpContextAccessor httpContextAccessor)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
         _logger = logger;
         _cache = cache;
+        _httpContextAccessor = httpContextAccessor;
+    }
+
+    // 获取当前用户ID的辅助方法
+    private int? GetCurrentUserIdFromContext()
+    {
+        try
+        {
+            var userIdClaim = _httpContextAccessor.HttpContext?.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim))
+                return null;
+                
+            return int.TryParse(userIdClaim, out int userId) ? userId : null;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     public async Task<PagedResultDto<ActivityDto>> GetActivitiesAsync(ActivitySearchDto searchDto)
     {
-        var query = await _unitOfWork.Activities.FindAsync(a => true);
-        var activities = query.AsQueryable();
+        IQueryable<Activity> activities = _unitOfWork.Activities.GetQueryable()
+            .Include(a => a.Category)
+            .Include(a => a.Creator)
+            .Include(a => a.Tags);
 
         // 应用搜索过滤器
         if (!string.IsNullOrWhiteSpace(searchDto.Keyword))
@@ -47,10 +71,7 @@ public class ActivityService : IActivityService
             activities = activities.Where(a => a.CategoryId == searchDto.CategoryId.Value);
         }
 
-        if (searchDto.Status.HasValue)
-        {
-            activities = activities.Where(a => a.Status == searchDto.Status.Value);
-        }
+        // 移除了Status过滤，该字段已从DTO中删除
 
         if (searchDto.StartDate.HasValue)
         {
@@ -62,65 +83,148 @@ public class ActivityService : IActivityService
             activities = activities.Where(a => a.EndTime <= searchDto.EndDate.Value);
         }
 
-        if (!string.IsNullOrWhiteSpace(searchDto.Location))
-        {
-            activities = activities.Where(a => a.Location.Contains(searchDto.Location));
-        }
+        // 移除了Location过滤，该字段已从DTO中删除
 
+        // 状态过滤
         if (searchDto.IsRegisterable.HasValue && searchDto.IsRegisterable.Value)
         {
             activities = activities.Where(a => 
-                a.Status == ActivityStatus.Published && 
+                a.Status == ActivityStatus.Published &&
                 a.RegistrationDeadline > DateTime.UtcNow &&
                 a.CurrentParticipants < a.MaxParticipants);
         }
 
-        // 总数量
-        var totalCount = activities.Count();
-
-        // 排序
-        switch (searchDto.SortBy.ToLower())
+        // 对于复杂排序（热度、推荐），先获取所有数据到内存；对于简单排序，在数据库层面进行
+        List<Activity> allActivities;
+        int totalCount;
+        
+        if (searchDto.SortBy.ToLower() == "popularity" || searchDto.SortBy.ToLower() == "recommended")
         {
-            case "starttime":
-                activities = searchDto.SortDescending 
-                    ? activities.OrderByDescending(a => a.StartTime)
-                    : activities.OrderBy(a => a.StartTime);
-                break;
-            case "createdat":
-                activities = searchDto.SortDescending 
-                    ? activities.OrderByDescending(a => a.CreatedAt)
-                    : activities.OrderBy(a => a.CreatedAt);
-                break;
-            case "title":
-                activities = searchDto.SortDescending 
-                    ? activities.OrderByDescending(a => a.Title)
-                    : activities.OrderBy(a => a.Title);
-                break;
-            default:
-                activities = activities.OrderBy(a => a.StartTime);
-                break;
+            // 复杂排序：先获取所有匹配的数据到内存
+            allActivities = await activities.ToListAsync();
+            totalCount = allActivities.Count;
+            
+            // 在内存中进行复杂排序
+            switch (searchDto.SortBy.ToLower())
+            {
+                case "popularity":
+                    // 按热度排序：综合考虑参与人数、报名率、活动新旧程度
+                    allActivities = allActivities.OrderByDescending(a => 
+                        (a.CurrentParticipants * 1.0 / Math.Max(a.MaxParticipants, 1)) * 0.4 + // 报名率权重40%
+                        a.CurrentParticipants * 0.3 + // 参与人数权重30%
+                        (1.0 / Math.Max((DateTime.UtcNow - a.CreatedAt).TotalDays + 1, 1)) * 0.3 // 新鲜度权重30%
+                    ).ToList();
+                    break;
+                    
+                case "recommended":
+                    // 推荐排序：需要用户ID，如果没有则按热度排序
+                    var currentUserId = GetCurrentUserIdFromContext();
+                    if (currentUserId.HasValue)
+                    {
+                        // 基于用户偏好的推荐排序
+                        var userPreferences = await _unitOfWork.UserActivityPreferences
+                            .FindAsync(p => p.UserId == currentUserId.Value);
+                        
+                        if (userPreferences.Any())
+                        {
+                            var preferenceWeights = userPreferences.ToDictionary(p => p.CategoryId, p => p.Weight);
+                            allActivities = allActivities.OrderByDescending(a => 
+                                preferenceWeights.GetValueOrDefault(a.CategoryId, 0.5) * 0.6 + // 用户偏好权重60%
+                                (a.CurrentParticipants * 1.0 / Math.Max(a.MaxParticipants, 1)) * 0.4 // 热度权重40%
+                            ).ToList();
+                        }
+                        else
+                        {
+                            // 用户没有偏好，按热度排序
+                            allActivities = allActivities.OrderByDescending(a => 
+                                (a.CurrentParticipants * 1.0 / Math.Max(a.MaxParticipants, 1)) * 0.4 +
+                                a.CurrentParticipants * 0.3 +
+                                (1.0 / Math.Max((DateTime.UtcNow - a.CreatedAt).TotalDays + 1, 1)) * 0.3
+                            ).ToList();
+                        }
+                    }
+                    else
+                    {
+                        // 未登录用户，按热度排序
+                        allActivities = allActivities.OrderByDescending(a => 
+                            (a.CurrentParticipants * 1.0 / Math.Max(a.MaxParticipants, 1)) * 0.4 +
+                            a.CurrentParticipants * 0.3 +
+                            (1.0 / Math.Max((DateTime.UtcNow - a.CreatedAt).TotalDays + 1, 1)) * 0.3
+                        ).ToList();
+                    }
+                    break;
+            }
+            
+            // 内存分页
+            var pagedMemoryActivities = allActivities
+                .Skip((searchDto.Page - 1) * searchDto.PageSize)
+                .Take(searchDto.PageSize)
+                .ToList();
+                
+            var activityDtos = _mapper.Map<List<ActivityDto>>(pagedMemoryActivities);
+            
+            return new PagedResultDto<ActivityDto>
+            {
+                Items = activityDtos,
+                TotalCount = totalCount,
+                PageIndex = searchDto.Page,
+                PageSize = searchDto.PageSize
+            };
         }
-
-        // 分页
-        var pagedActivities = activities
-            .Skip((searchDto.PageIndex - 1) * searchDto.PageSize)
-            .Take(searchDto.PageSize)
-            .ToList();
-
-        var activityDtos = _mapper.Map<List<ActivityDto>>(pagedActivities);
-
-        return new PagedResultDto<ActivityDto>
+        else
         {
-            Items = activityDtos,
-            TotalCount = totalCount,
-            PageIndex = searchDto.PageIndex,
-            PageSize = searchDto.PageSize
-        };
+            // 简单排序：在数据库层面进行
+            switch (searchDto.SortBy.ToLower())
+            {
+                case "createdat":
+                    activities = searchDto.SortDescending 
+                        ? activities.OrderByDescending(a => a.CreatedAt)
+                        : activities.OrderBy(a => a.CreatedAt);
+                    break;
+                case "title":
+                    activities = searchDto.SortDescending 
+                        ? activities.OrderByDescending(a => a.Title)
+                        : activities.OrderBy(a => a.Title);
+                    break;
+                case "currentparticipants":
+                    activities = searchDto.SortDescending 
+                        ? activities.OrderByDescending(a => a.CurrentParticipants)
+                        : activities.OrderBy(a => a.CurrentParticipants);
+                    break;
+                case "starttime":
+                default:
+                    activities = searchDto.SortDescending 
+                        ? activities.OrderByDescending(a => a.StartTime)
+                        : activities.OrderBy(a => a.StartTime);
+                    break;
+            }
+
+            // 数据库分页
+            totalCount = await activities.CountAsync();
+            var pagedActivities = await activities
+                .Skip((searchDto.Page - 1) * searchDto.PageSize)
+                .Take(searchDto.PageSize)
+                .ToListAsync();
+
+            var activityDtos = _mapper.Map<List<ActivityDto>>(pagedActivities);
+
+            return new PagedResultDto<ActivityDto>
+            {
+                Items = activityDtos,
+                TotalCount = totalCount,
+                PageIndex = searchDto.Page,
+                PageSize = searchDto.PageSize
+            };
+        }
     }
 
     public async Task<ActivityDto?> GetActivityByIdAsync(int id, int? currentUserId = null)
     {
-        var activity = await _unitOfWork.Activities.GetByIdAsync(id);
+        var activity = await _unitOfWork.Activities.GetQueryable()
+            .Include(a => a.Category)
+            .Include(a => a.Creator)
+            .Include(a => a.Tags)
+            .FirstOrDefaultAsync(a => a.Id == id);
         if (activity == null) return null;
 
         var activityDto = _mapper.Map<ActivityDto>(activity);
@@ -384,17 +488,6 @@ public class ActivityService : IActivityService
         return _mapper.Map<IEnumerable<ActivityRegistrationDto>>(registrations);
     }
 
-    public async Task<IEnumerable<ActivityDto>> GetUserRegisteredActivitiesAsync(int userId)
-    {
-        var registrations = await _unitOfWork.ActivityRegistrations.FindAsync(r => 
-            r.UserId == userId && r.Status == RegistrationStatus.Registered);
-        
-        var activityIds = registrations.Select(r => r.ActivityId).ToList();
-        var activities = await _unitOfWork.Activities.FindAsync(a => activityIds.Contains(a.Id));
-        
-        return _mapper.Map<IEnumerable<ActivityDto>>(activities);
-    }
-
     public async Task<IEnumerable<ActivityCategoryDto>> GetCategoriesAsync()
     {
         try
@@ -497,10 +590,15 @@ public class ActivityService : IActivityService
                 }
             }
 
-            // 查询已发布且未过期的活动
-            var activities = await _unitOfWork.Activities.FindAsync(a => 
-                a.Status == ActivityStatus.Published && 
-                a.StartTime > DateTime.UtcNow);
+            // 查询已发布的活动（移除时间限制以便显示历史活动）
+            var activities = await _unitOfWork.Activities.GetQueryable()
+                .Include(a => a.Category)
+                .Include(a => a.Creator)
+                .Include(a => a.Tags)
+                .Where(a => a.Status == ActivityStatus.Published)
+                .ToListAsync();
+            
+            _logger.LogInformation($"查询到 {activities.Count} 个已发布的活动");
             
             if (!activities.Any())
             {

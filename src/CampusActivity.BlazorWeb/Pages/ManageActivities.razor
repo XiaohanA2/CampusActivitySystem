@@ -29,7 +29,7 @@
 
     <!-- 搜索和过滤 -->
     <div class="row mb-4">
-        <div class="col-md-6">
+        <div class="col-md-4">
             <div class="input-group">
                 <input type="text" class="form-control" placeholder="搜索活动名称..." 
                        @bind="searchTerm" @bind:event="oninput" @onkeyup="OnSearchKeyUp" />
@@ -37,6 +37,18 @@
                     <i class="oi oi-magnifying-glass"></i>
                 </button>
             </div>
+        </div>
+        <div class="col-md-3">
+            <select class="form-select" @bind="selectedCategoryId">
+                <option value="">所有分类</option>
+                @if (categories != null)
+                {
+                    @foreach (var category in categories)
+                    {
+                        <option value="@category.Id">@category.Name</option>
+                    }
+                }
+            </select>
         </div>
         <div class="col-md-3">
             <select class="form-select" @bind="selectedStatus">
@@ -48,7 +60,7 @@
                 <option value="completed">已结束</option>
             </select>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
             <button class="btn btn-outline-primary w-100" @onclick="ApplyFilters">
                 应用过滤
             </button>
@@ -72,6 +84,16 @@
             {
                 <div class="col-lg-6 col-xl-4 mb-4">
                     <div class="card shadow h-100">
+                        @if (!string.IsNullOrEmpty(activity.ImageUrl))
+                        {
+                            <img src="@activity.ImageUrl" alt="@activity.Title" class="activity-card-image" />
+                        }
+                        else
+                        {
+                            <div class="activity-card-placeholder">
+                                <i class="oi oi-calendar"></i>
+                            </div>
+                        }
                         <div class="card-header d-flex justify-content-between align-items-center">
                             <h6 class="mb-0 text-truncate">@activity.Title</h6>
                             <span class="badge @GetStatusBadgeClass(activity)">
@@ -82,11 +104,17 @@
                             <p class="card-text text-muted small">@(activity.Description.Length > 100 ? activity.Description.Substring(0, 100) + "..." : activity.Description)</p>
                             
                             <div class="row text-center mb-3">
-                                <div class="col-6">
+                                <div class="col-4">
                                     <small class="text-muted">开始时间</small><br>
                                     <strong>@activity.StartTime.ToString("MM-dd HH:mm")</strong>
                                 </div>
-                                <div class="col-6">
+                                <div class="col-4">
+                                    <small class="text-muted">报名截止</small><br>
+                                    <strong class="@(activity.RegistrationDeadline < DateTime.Now ? "text-danger" : "text-warning")">
+                                        @activity.RegistrationDeadline.ToString("MM-dd HH:mm")
+                                    </strong>
+                                </div>
+                                <div class="col-4">
                                     <small class="text-muted">报名人数</small><br>
                                     <strong class="text-primary">@activity.RegistrationCount/@activity.MaxParticipants</strong>
                                 </div>
@@ -169,10 +197,25 @@
     private int currentPage = 1;
     private string searchTerm = "";
     private string selectedStatus = "";
+    private int? selectedCategoryId = null;
+    private IEnumerable<ActivityCategoryDto>? categories;
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadCategories();
         await LoadActivities();
+    }
+
+    private async Task LoadCategories()
+    {
+        try
+        {
+            categories = await AdminService.GetCategoriesAsync();
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"加载分类失败: {ex.Message}");
+        }
     }
 
     private async Task LoadActivities()
@@ -180,7 +223,7 @@
         isLoading = true;
         try
         {
-            activities = await AdminService.GetAllActivitiesAsync(currentPage, 12, searchTerm, null, selectedStatus);
+            activities = await AdminService.GetAllActivitiesAsync(currentPage, 12, searchTerm, selectedCategoryId, selectedStatus);
         }
         catch (Exception ex)
         {
@@ -194,7 +237,6 @@
 
     private async Task RefreshData()
     {
-        currentPage = 1;
         await LoadActivities();
     }
 
@@ -210,18 +252,18 @@
         await LoadActivities();
     }
 
+    private async Task OnSearchKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SearchActivities();
+        }
+    }
+
     private async Task ChangePage(int page)
     {
         currentPage = page;
         await LoadActivities();
-    }
-
-    private void OnSearchKeyUp(KeyboardEventArgs e)
-    {
-        if (e.Key == "Enter")
-        {
-            _ = SearchActivities();
-        }
     }
 
     private async Task DeleteActivity(int activityId)
@@ -231,15 +273,15 @@
         {
             try
             {
-                var success = await AdminService.ForceDeleteActivityAsync(activityId);
+                var success = await AdminService.DeleteActivityAsync(activityId);
                 if (success)
                 {
-                    await JSRuntime.InvokeVoidAsync("alert", "活动已删除");
+                    await JSRuntime.InvokeVoidAsync("alert", "活动删除成功！");
                     await LoadActivities();
                 }
                 else
                 {
-                    await JSRuntime.InvokeVoidAsync("alert", "删除活动失败");
+                    await JSRuntime.InvokeVoidAsync("alert", "删除活动失败！");
                 }
             }
             catch (Exception ex)
@@ -249,27 +291,31 @@
         }
     }
 
-    private string GetStatusText(AdminActivityDto activity)
-    {
-        var now = DateTime.Now;
-        if (!activity.IsPublished)
-            return "草稿";
-        if (activity.StartTime > now)
-            return "即将开始";
-        if (activity.StartTime <= now && activity.EndTime >= now)
-            return "进行中";
-        return "已结束";
-    }
-
     private string GetStatusBadgeClass(AdminActivityDto activity)
     {
-        var now = DateTime.Now;
         if (!activity.IsPublished)
-            return "badge-secondary";
+            return "badge bg-secondary";
+            
+        var now = DateTime.Now;
         if (activity.StartTime > now)
-            return "badge-info";
-        if (activity.StartTime <= now && activity.EndTime >= now)
-            return "badge-success";
-        return "badge-warning";
+            return "badge bg-info";
+        else if (activity.EndTime < now)
+            return "badge bg-secondary";
+        else
+            return "badge bg-success";
+    }
+
+    private string GetStatusText(AdminActivityDto activity)
+    {
+        if (!activity.IsPublished)
+            return "草稿";
+            
+        var now = DateTime.Now;
+        if (activity.StartTime > now)
+            return "即将开始";
+        else if (activity.EndTime < now)
+            return "已结束";
+        else
+            return "进行中";
     }
 } 

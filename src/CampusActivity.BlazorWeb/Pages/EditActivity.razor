@@ -1,6 +1,9 @@
-@page "/manage-activities/edit/{ActivityId:int}"
+@page "/manage-activities/edit/{id:int}"
 @using CampusActivity.BlazorWeb.Services
 @using CampusActivity.Shared.DTOs
+@using CampusActivity.BlazorWeb.Shared
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Teacher,Admin")]
 @inject IAdminService AdminService
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
@@ -10,30 +13,41 @@
 <div class="container mt-4">
     <div class="row justify-content-center">
         <div class="col-md-8">
-            @if (isLoading)
-            {
-                <div class="text-center py-5">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">加载中...</span>
-                    </div>
-                    <p class="mt-2">正在加载活动信息...</p>
+            <div class="card shadow">
+                <div class="card-header bg-warning text-white">
+                    <h4 class="mb-0"><i class="oi oi-pencil me-2"></i>编辑活动</h4>
                 </div>
-            }
-            else if (activity == null)
-            {
-                <div class="alert alert-danger">
-                    <h5><i class="oi oi-warning me-2"></i>未找到该活动</h5>
-                    <p>您要编辑的活动不存在或已被删除。</p>
-                    <a href="/manage-activities" class="btn btn-primary">返回活动管理</a>
-                </div>
-            }
-            else
-            {
-                <div class="card shadow">
-                    <div class="card-header bg-primary text-white">
-                        <h4 class="mb-0"><i class="oi oi-pencil me-2"></i>编辑活动</h4>
-                    </div>
-                    <div class="card-body">
+                <div class="card-body">
+                    @if (isLoading)
+                    {
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">加载中...</span>
+                            </div>
+                            <p class="mt-2">正在加载活动信息...</p>
+                        </div>
+                    }
+                    else if (activity == null)
+                    {
+                        <div class="alert alert-danger">
+                            <i class="oi oi-warning me-2"></i>
+                            找不到指定的活动，或者您没有权限编辑此活动。
+                        </div>
+                        <a href="/manage-activities" class="btn btn-secondary">
+                            <i class="oi oi-arrow-left me-2"></i>返回活动列表
+                        </a>
+                    }
+                    else if (categories == null)
+                    {
+                        <div class="text-center py-3">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">加载中...</span>
+                            </div>
+                            <p class="mt-2">正在加载分类...</p>
+                        </div>
+                    }
+                    else
+                    {
                         <EditForm Model="activity" OnValidSubmit="HandleValidSubmit">
                             <DataAnnotationsValidator />
                             <ValidationSummary />
@@ -49,26 +63,21 @@
                             </div>
                             
                             <div class="mb-3">
-                                <label class="form-label fw-bold">活动图片URL</label>
-                                <div class="input-group">
-                                    <InputText class="form-control" @bind-Value="activity.ImageUrl" placeholder="请输入图片URL地址..." />
-                                    <button class="btn btn-outline-secondary" type="button" @onclick="PreviewImage">
-                                        <i class="oi oi-eye"></i> 预览
-                                    </button>
-                                </div>
-                                <small class="text-muted">支持jpg、png、gif等格式的图片链接</small>
+                                <label class="form-label fw-bold">活动分类 <span class="text-danger">*</span></label>
+                                <InputSelect class="form-select" @bind-Value="activity.CategoryId" required>
+                                    <option value="0">请选择分类</option>
+                                    @foreach (var category in categories)
+                                    {
+                                        <option value="@category.Id">@category.Name</option>
+                                    }
+                                </InputSelect>
                             </div>
                             
-                            @if (!string.IsNullOrEmpty(activity.ImageUrl))
-                            {
-                                <div class="mb-3">
-                                    <label class="form-label fw-bold">图片预览</label>
-                                    <div class="text-center">
-                                        <img src="@activity.ImageUrl" class="img-fluid rounded" style="max-height: 200px; max-width: 100%;"
-                                             alt="活动图片预览" />
-                                    </div>
-                                </div>
-                            }
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">活动图片</label>
+                                <ImageUpload ImageUrl="@activity.ImageUrl" ImageUrlChanged="@UpdateImageUrl" Category="@selectedCategoryName" />
+                                <small class="text-muted">可上传本地图片或生成随机图片作为活动封面</small>
+                            </div>
                             
                             <div class="row mb-3">
                                 <div class="col-md-6">
@@ -82,6 +91,12 @@
                             </div>
                             
                             <div class="mb-3">
+                                <label class="form-label fw-bold">报名截止时间 <span class="text-danger">*</span></label>
+                                <InputDate class="form-control" @bind-Value="activity.RegistrationDeadline" required />
+                                <small class="text-muted">学生必须在此时间前完成报名</small>
+                            </div>
+                            
+                            <div class="mb-3">
                                 <label class="form-label fw-bold">活动地点 <span class="text-danger">*</span></label>
                                 <InputText class="form-control" @bind-Value="activity.Location" placeholder="请输入活动地点..." required />
                             </div>
@@ -92,12 +107,16 @@
                             </div>
                             
                             <div class="mb-3">
-                                <label class="form-label fw-bold">活动分类 <span class="text-danger">*</span></label>
-                                <InputText class="form-control" @bind-Value="activity.Category" placeholder="请输入活动分类..." required />
+                                <div class="form-check">
+                                    <InputCheckbox class="form-check-input" @bind-Value="activity.IsPublished" id="isPublished" />
+                                    <label class="form-check-label" for="isPublished">
+                                        发布活动（取消勾选将保存为草稿）
+                                    </label>
+                                </div>
                             </div>
                             
                             <div class="d-flex gap-2">
-                                <button class="btn btn-primary" type="submit" disabled="@isSaving">
+                                <button class="btn btn-warning" type="submit" disabled="@isSaving">
                                     @if (isSaving)
                                     {
                                         <span class="spinner-border spinner-border-sm me-2" role="status"></span>
@@ -110,35 +129,42 @@
                                     }
                                 </button>
                                 <button class="btn btn-secondary" type="button" @onclick="GoBack" disabled="@isSaving">
-                                    <i class="oi oi-arrow-left me-2"></i>返回
+                                    <i class="oi oi-arrow-left me-2"></i>取消
                                 </button>
                             </div>
                         </EditForm>
-                    </div>
+                    }
                 </div>
-            }
+            </div>
         </div>
     </div>
 </div>
 
 @code {
-    [Parameter]
-    public int ActivityId { get; set; }
-
+    [Parameter] public int Id { get; set; }
+    
     private AdminActivityDto? activity;
-    private bool isLoading = true;
     private bool isSaving = false;
+    private bool isLoading = true;
+    private IEnumerable<ActivityCategoryDto>? categories;
+    private string selectedCategoryName => categories?.FirstOrDefault(c => c.Id == activity?.CategoryId)?.Name ?? "";
 
     protected override async Task OnInitializedAsync()
     {
-        isLoading = true;
         try
         {
-            activity = await AdminService.GetActivityByIdAsync(ActivityId);
+            // 并行加载分类和活动信息
+            var categoriesTask = AdminService.GetCategoriesAsync();
+            var activityTask = AdminService.GetActivityByIdAsync(Id);
+            
+            await Task.WhenAll(categoriesTask, activityTask);
+            
+            categories = await categoriesTask;
+            activity = await activityTask;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"加载活动失败: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("alert", $"加载数据失败: {ex.Message}");
         }
         finally
         {
@@ -148,10 +174,34 @@
 
     private async Task HandleValidSubmit()
     {
+        if (activity == null) return;
+        
+        if (activity.CategoryId == 0)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "请选择活动分类");
+            return;
+        }
+
+        // 验证时间逻辑（编辑时相对宽松，允许修改已过期的活动）
+        if (activity.EndTime <= activity.StartTime)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "活动结束时间必须晚于开始时间");
+            return;
+        }
+
+        if (activity.RegistrationDeadline >= activity.StartTime)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "报名截止时间必须早于活动开始时间");
+            return;
+        }
+
         isSaving = true;
         try
         {
-            var success = await AdminService.UpdateActivityAsync(activity!);
+            Console.WriteLine($"准备提交活动数据: {System.Text.Json.JsonSerializer.Serialize(activity)}");
+            var success = await AdminService.UpdateActivityAsync(activity);
+            Console.WriteLine($"API调用结果: {success}");
+            
             if (success)
             {
                 await JSRuntime.InvokeVoidAsync("alert", "活动更新成功！");
@@ -159,7 +209,7 @@
             }
             else
             {
-                await JSRuntime.InvokeVoidAsync("alert", "活动更新失败，请检查控制台日志");
+                await JSRuntime.InvokeVoidAsync("alert", "活动更新失败，请检查输入信息");
             }
         }
         catch (Exception ex)
@@ -178,9 +228,11 @@
         Navigation.NavigateTo("/manage-activities");
     }
 
-    private void PreviewImage()
+    private void UpdateImageUrl(string? value)
     {
-        // 触发UI更新以显示图片预览
-        StateHasChanged();
+        if (activity != null)
+        {
+            activity.ImageUrl = value;
+        }
     }
 } 

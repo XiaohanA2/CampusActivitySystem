@@ -57,4 +57,11 @@ window.copyToClipboard = function (text) {
 
         }
     }
+};
+
+// 文件上传相关函数
+window.triggerFileInput = (element) => {
+    if (element) {
+        element.click();
+    }
 }; 

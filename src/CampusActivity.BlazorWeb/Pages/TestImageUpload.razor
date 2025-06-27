@@ -1,0 +1,62 @@
+@page "/test-image-upload"
+@using CampusActivity.BlazorWeb.Shared
+@inject IJSRuntime JSRuntime
+
+<PageTitle>测试图片上传</PageTitle>
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>测试图片上传功能</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">当前图片URL:</label>
+                        <input type="text" class="form-control" value="@imageUrl" readonly />
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">选择活动分类:</label>
+                        <select class="form-select" @bind="selectedCategory">
+                            <option value="">请选择分类</option>
+                            <option value="学术讲座">学术讲座</option>
+                            <option value="文艺演出">文艺演出</option>
+                            <option value="体育竞技">体育竞技</option>
+                            <option value="社会实践">社会实践</option>
+                            <option value="创新创业">创新创业</option>
+                            <option value="交流参观">交流参观</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">图片上传组件:</label>
+                        <ImageUpload ImageUrl="@imageUrl" ImageUrlChanged="@OnImageUrlChanged" Category="@selectedCategory" />
+                    </div>
+                    
+                    @if (!string.IsNullOrEmpty(lastMessage))
+                    {
+                        <div class="alert alert-info">
+                            <strong>状态:</strong> @lastMessage
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string? imageUrl;
+    private string selectedCategory = "";
+    private string lastMessage = "";
+
+    private async Task OnImageUrlChanged(string? newImageUrl)
+    {
+        imageUrl = newImageUrl;
+        lastMessage = $"图片URL已更新: {imageUrl ?? "null"}";
+        StateHasChanged();
+        await JSRuntime.InvokeVoidAsync("console.log", $"Image URL changed: {imageUrl}");
+    }
+} 

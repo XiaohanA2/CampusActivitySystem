@@ -401,7 +401,8 @@
                 EndTime = DateTime.Now.AddDays(1).AddHours(2),
                 Location = "测试地点",
                 MaxParticipants = 10,
-                Category = "学术讲座"
+                CategoryId = 1, // 使用第一个分类ID（学术讲座）
+                CategoryName = "学术讲座"
             };
 
             Console.WriteLine($"测试创建活动数据: {System.Text.Json.JsonSerializer.Serialize(testActivity)}");

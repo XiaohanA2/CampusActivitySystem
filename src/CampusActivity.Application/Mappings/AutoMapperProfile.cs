@@ -23,6 +23,24 @@ public class AutoMapperProfile : Profile
             .ForMember(dest => dest.IsRegistered, opt => opt.Ignore())
             .ForMember(dest => dest.RecommendationScore, opt => opt.Ignore());
 
+        CreateMap<Activity, AdminActivityDto>()
+            .ForMember(dest => dest.CategoryName, opt => opt.MapFrom(src => src.Category.Name))
+            .ForMember(dest => dest.Creator, opt => opt.MapFrom(src => src.Creator.FullName))
+            .ForMember(dest => dest.IsPublished, opt => opt.MapFrom(src => src.Status == ActivityStatus.Published))
+            .ForMember(dest => dest.RegistrationCount, opt => opt.MapFrom(src => src.Registrations.Count(r => r.Status == RegistrationStatus.Registered)));
+
+        CreateMap<AdminActivityDto, Activity>()
+            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.IsPublished ? ActivityStatus.Published : ActivityStatus.Draft))
+            .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.CreatedBy, opt => opt.Ignore())
+            .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => DateTime.UtcNow))
+            .ForMember(dest => dest.CurrentParticipants, opt => opt.Ignore())
+            .ForMember(dest => dest.Category, opt => opt.Ignore())
+            .ForMember(dest => dest.Creator, opt => opt.Ignore())
+            .ForMember(dest => dest.Registrations, opt => opt.Ignore())
+            .ForMember(dest => dest.Tags, opt => opt.Ignore())
+            .ForMember(dest => dest.Recommendations, opt => opt.Ignore());
+
         CreateMap<CreateActivityDto, Activity>()
             .ForMember(dest => dest.Id, opt => opt.Ignore())
             .ForMember(dest => dest.CurrentParticipants, opt => opt.MapFrom(src => 0))
@@ -72,5 +90,9 @@ public class AutoMapperProfile : Profile
             .ForMember(dest => dest.UserId, opt => opt.Ignore())
             .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => DateTime.UtcNow));
+
+        // 用户偏好映射
+        CreateMap<UserActivityPreference, UserActivityPreferenceDto>()
+            .ForMember(dest => dest.CategoryName, opt => opt.MapFrom(src => src.Category.Name));
     }
 } 

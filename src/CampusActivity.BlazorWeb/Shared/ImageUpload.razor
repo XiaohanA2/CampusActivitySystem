@@ -1,0 +1,307 @@
+@using Microsoft.AspNetCore.Components.Forms
+@using System.Net.Http.Headers
+@using Blazored.LocalStorage
+@inject IHttpClientFactory HttpClientFactory
+@inject IJSRuntime JSRuntime
+@inject ILocalStorageService LocalStorage
+
+<div class="image-upload-container">
+    @if (string.IsNullOrEmpty(ImageUrl))
+    {
+        <div class="image-upload-zone @(IsUploading ? "uploading" : "")" @onclick="TriggerFileInput">
+            <div class="upload-icon">
+                @if (IsUploading)
+                {
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">上传中...</span>
+                    </div>
+                }
+                else
+                {
+                    <i class="oi oi-cloud-upload"></i>
+                }
+            </div>
+            <p class="upload-text">
+                @if (IsUploading)
+                {
+                    <span>正在上传图片...</span>
+                }
+                else
+                {
+                    <span>点击选择图片文件</span>
+                }
+            </p>
+            <p class="upload-text text-muted small">支持 JPG、PNG、GIF、WebP 格式，最大 5MB</p>
+            <InputFile @ref="fileInput" OnChange="HandleFileSelected" accept="image/*" style="display: none;" />
+        </div>
+        
+        @if (!string.IsNullOrEmpty(ErrorMessage))
+        {
+            <div class="mt-2 alert alert-danger alert-sm">
+                <i class="oi oi-warning me-1"></i>@ErrorMessage
+            </div>
+        }
+    }
+    else
+    {
+        <div class="image-preview-container">
+            <img src="@ImageUrl" alt="活动图片" class="image-preview" @onerror="HandleImageError" />
+            <button type="button" class="image-delete-btn" @onclick="DeleteImage" title="删除图片">
+                <i class="oi oi-trash"></i>
+            </button>
+        </div>
+        <div class="mt-2 text-center">
+            <button type="button" class="btn btn-outline-secondary btn-sm me-2" @onclick="ClearImage">
+                <i class="oi oi-reload me-1"></i>重新选择
+            </button>
+            @if (ShowRandomGenerator)
+            {
+                <button type="button" class="btn btn-outline-info btn-sm" @onclick="GenerateRandomImage">
+                    <i class="oi oi-aperture me-1"></i>随机图片
+                </button>
+            }
+        </div>
+    }
+
+    @if (ShowRandomGenerator && string.IsNullOrEmpty(ImageUrl))
+    {
+        <div class="mt-2 text-center">
+            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="GenerateRandomImage" disabled="@IsUploading">
+                <i class="oi oi-aperture me-1"></i>生成随机图片
+            </button>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string? ImageUrl { get; set; }
+    [Parameter] public EventCallback<string?> ImageUrlChanged { get; set; }
+    [Parameter] public string? Category { get; set; }
+    [Parameter] public bool ShowRandomGenerator { get; set; } = true;
+
+    private InputFile? fileInput;
+    private bool IsUploading = false;
+    private string ErrorMessage = string.Empty;
+
+    private async Task TriggerFileInput()
+    {
+        if (IsUploading) return;
+        
+        if (fileInput != null)
+        {
+            await JSRuntime.InvokeVoidAsync("triggerFileInput", fileInput.Element);
+        }
+    }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file != null)
+        {
+            await UploadFile(file);
+        }
+    }
+
+    private async Task UploadFile(IBrowserFile file)
+    {
+        try
+        {
+            IsUploading = true;
+            ErrorMessage = string.Empty;
+            StateHasChanged();
+
+            // 检查文件大小
+            if (file.Size > 5 * 1024 * 1024)
+            {
+                ErrorMessage = "图片文件大小不能超过5MB";
+                return;
+            }
+
+            // 检查文件类型
+            var allowedTypes = new[] { "image/jpeg", "image/png", "image/gif", "image/webp", "image/jpg" };
+            if (!allowedTypes.Contains(file.ContentType.ToLower()))
+            {
+                ErrorMessage = "只支持 JPEG、PNG、GIF、WebP 格式的图片";
+                return;
+            }
+
+            // 创建表单数据
+            using var content = new MultipartFormDataContent();
+            var stream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
+            var streamContent = new StreamContent(stream);
+            streamContent.Headers.ContentType = new MediaTypeHeaderValue(file.ContentType);
+            content.Add(streamContent, "file", file.Name);
+
+            // 上传文件
+            using var httpClient = await CreateAuthenticatedHttpClient();
+            var response = await httpClient.PostAsync("api/activities/upload-image", content);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<UploadResult>();
+                if (result != null && !string.IsNullOrEmpty(result.ImageUrl))
+                {
+                    ImageUrl = result.ImageUrl;
+                    await ImageUrlChanged.InvokeAsync(ImageUrl);
+                    await JSRuntime.InvokeVoidAsync("console.log", $"图片上传成功: {ImageUrl}");
+                }
+                else
+                {
+                    ErrorMessage = "上传响应无效";
+                }
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                
+                // 处理认证错误
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    ErrorMessage = "您没有权限上传图片，请确保您已登录且具有相应权限（老师或管理员）";
+                }
+                else
+                {
+                    ErrorMessage = $"上传失败: {response.StatusCode} - {errorContent}";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"上传失败: {ex.Message}";
+            await JSRuntime.InvokeVoidAsync("console.error", $"图片上传异常: {ex}");
+        }
+        finally
+        {
+            IsUploading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task DeleteImage()
+    {
+        if (string.IsNullOrEmpty(ImageUrl))
+            return;
+
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "确定要删除这张图片吗？");
+        if (!confirmed)
+            return;
+
+        try
+        {
+            // 只删除本地上传的图片
+            if (ImageUrl.StartsWith("/uploads/"))
+            {
+                using var httpClient = await CreateAuthenticatedHttpClient();
+                var response = await httpClient.DeleteAsync($"api/activities/delete-image?imageUrl={Uri.EscapeDataString(ImageUrl)}");
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    
+                    if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                    {
+                        ErrorMessage = "您没有权限删除图片，请确保您已登录且具有相应权限（老师或管理员）";
+                    }
+                    else
+                    {
+                        ErrorMessage = $"删除失败: {errorContent}";
+                    }
+                    return;
+                }
+            }
+
+            await ClearImage();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"删除失败: {ex.Message}";
+        }
+    }
+
+    private async Task ClearImage()
+    {
+        ImageUrl = null;
+        ErrorMessage = string.Empty;
+        await ImageUrlChanged.InvokeAsync(ImageUrl);
+    }
+
+    private async Task GenerateRandomImage()
+    {
+        try
+        {
+            IsUploading = true;
+            ErrorMessage = string.Empty;
+            StateHasChanged();
+
+            using var httpClient = await CreateAuthenticatedHttpClient();
+            var response = await httpClient.GetAsync($"api/activities/random-image?category={Uri.EscapeDataString(Category ?? "")}");
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<UploadResult>();
+                if (result != null && !string.IsNullOrEmpty(result.ImageUrl))
+                {
+                    ImageUrl = result.ImageUrl;
+                    await ImageUrlChanged.InvokeAsync(ImageUrl);
+                    await JSRuntime.InvokeVoidAsync("console.log", $"随机图片生成成功: {ImageUrl}");
+                }
+                else
+                {
+                    ErrorMessage = "生成随机图片失败：服务器返回无效数据";
+                }
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    ErrorMessage = "生成随机图片时发生认证错误";
+                }
+                else
+                {
+                    ErrorMessage = $"生成随机图片失败: {response.StatusCode} - {errorContent}";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"生成随机图片失败: {ex.Message}";
+            await JSRuntime.InvokeVoidAsync("console.error", $"随机图片生成异常: {ex}");
+        }
+        finally
+        {
+            IsUploading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleImageError()
+    {
+        ErrorMessage = "图片加载失败，请重新选择";
+        await ClearImage();
+    }
+
+    private async Task<HttpClient> CreateAuthenticatedHttpClient()
+    {
+        var httpClient = HttpClientFactory.CreateClient("CampusActivityAPI");
+        
+        try
+        {
+            var token = await LocalStorage.GetItemAsync<string>("authToken");
+            if (!string.IsNullOrWhiteSpace(token))
+            {
+                httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("console.warn", $"获取认证令牌失败: {ex.Message}");
+        }
+        
+        return httpClient;
+    }
+
+    private class UploadResult
+    {
+        public string ImageUrl { get; set; } = string.Empty;
+    }
+} 

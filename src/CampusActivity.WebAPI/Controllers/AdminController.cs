@@ -213,7 +213,7 @@ public class AdminController : ControllerBase
     {
         try
         {
-            var query = _context.Activities
+            var activitiesQuery = _context.Activities
                 .Include(a => a.Category)
                 .Include(a => a.Creator)
                 .AsQueryable();
@@ -221,48 +221,46 @@ public class AdminController : ControllerBase
             // 搜索过滤
             if (!string.IsNullOrEmpty(search))
             {
-                query = query.Where(a => a.Title.Contains(search) || a.Description.Contains(search));
+                activitiesQuery = activitiesQuery.Where(a => a.Title.Contains(search) || a.Description.Contains(search));
             }
 
             // 分类过滤
             if (categoryId.HasValue)
             {
-                query = query.Where(a => a.CategoryId == categoryId.Value);
+                activitiesQuery = activitiesQuery.Where(a => a.CategoryId == categoryId.Value);
             }
 
             // 状态过滤
             if (!string.IsNullOrEmpty(status))
             {
-                var now = DateTime.Now;
-                query = status.ToLower() switch
+                if (Enum.TryParse<ActivityStatus>(status, true, out var statusEnum))
                 {
-                    "upcoming" => query.Where(a => a.StartTime > now),
-                    "ongoing" => query.Where(a => a.StartTime <= now && a.EndTime >= now),
-                    "completed" => query.Where(a => a.EndTime < now),
-                    "draft" => query.Where(a => a.Status == ActivityStatus.Draft),
-                    _ => query
-                };
+                    activitiesQuery = activitiesQuery.Where(a => a.Status == statusEnum);
+                }
             }
 
-            var totalCount = await query.CountAsync();
-            var activities = await query
+            var totalCount = await activitiesQuery.CountAsync();
+            var activities = await activitiesQuery
                 .OrderByDescending(a => a.CreatedAt)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .Select(a => new
+                .Select(a => new AdminActivityDto
                 {
-                    a.Id,
-                    a.Title,
-                    a.Description,
-                    a.StartTime,
-                    a.EndTime,
-                    a.Location,
-                    a.MaxParticipants,
+                    Id = a.Id,
+                    Title = a.Title,
+                    Description = a.Description,
+                    StartTime = a.StartTime,
+                    EndTime = a.EndTime,
+                    RegistrationDeadline = a.RegistrationDeadline,
+                    Location = a.Location,
+                    MaxParticipants = a.MaxParticipants,
                     IsPublished = a.Status == ActivityStatus.Published,
-                    a.CreatedAt,
-                    Category = a.Category!.Name,
-                    Creator = a.Creator!.FullName,
-                    RegistrationCount = _context.ActivityRegistrations.Count(r => r.ActivityId == a.Id)
+                    CreatedAt = a.CreatedAt,
+                    CategoryId = a.CategoryId,
+                    CategoryName = a.Category.Name,
+                    Creator = a.Creator.FullName,
+                    RegistrationCount = a.Registrations.Count(),
+                    ImageUrl = a.ImageUrl
                 })
                 .ToListAsync();
 
@@ -324,19 +322,23 @@ public class AdminController : ControllerBase
     }
 
     /// <summary>
-    /// 获取单个活动详情
+    /// 获取活动详情
     /// </summary>
     [HttpGet("activities/{id}")]
     public async Task<ActionResult<AdminActivityDto>> GetActivityById(int id)
+    {
+        try
     {
         var activity = await _context.Activities
             .Include(a => a.Category)
             .Include(a => a.Creator)
             .FirstOrDefaultAsync(a => a.Id == id);
+
         if (activity == null)
         {
             return NotFound(new { Message = "活动不存在" });
         }
+
         var dto = new AdminActivityDto
         {
             Id = activity.Id,
@@ -344,47 +346,72 @@ public class AdminController : ControllerBase
             Description = activity.Description,
             StartTime = activity.StartTime,
             EndTime = activity.EndTime,
+                RegistrationDeadline = activity.RegistrationDeadline,
             Location = activity.Location,
             MaxParticipants = activity.MaxParticipants,
             IsPublished = activity.Status == ActivityStatus.Published,
             CreatedAt = activity.CreatedAt,
-            Category = activity.Category?.Name ?? string.Empty,
-            Creator = activity.Creator?.FullName ?? string.Empty,
-            RegistrationCount = await _context.ActivityRegistrations.CountAsync(r => r.ActivityId == activity.Id)
+                CategoryId = activity.CategoryId,
+                CategoryName = activity.Category.Name,
+                Creator = activity.Creator.FullName,
+                RegistrationCount = activity.Registrations.Count(),
+                ImageUrl = activity.ImageUrl
         };
+
         return Ok(dto);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"获取活动详情失败，活动ID: {id}");
+            return StatusCode(500, new { Message = "获取活动详情失败", Error = ex.Message });
+        }
     }
 
     /// <summary>
-    /// 更新活动
+    /// 更新活动信息
     /// </summary>
     [HttpPut("activities/{id}")]
     public async Task<IActionResult> UpdateActivity(int id, [FromBody] AdminActivityDto dto)
     {
-        var activity = await _context.Activities.Include(a => a.Category).FirstOrDefaultAsync(a => a.Id == id);
+        try
+        {
+            var activity = await _context.Activities
+                .Include(a => a.Category)
+                .FirstOrDefaultAsync(a => a.Id == id);
+            
         if (activity == null)
         {
             return NotFound(new { Message = "活动不存在" });
         }
-        // 只允许管理员修改部分字段
+
+            // 验证分类是否存在
+            var category = await _context.ActivityCategories.FindAsync(dto.CategoryId);
+            if (category == null)
+            {
+                return BadRequest(new { Message = "指定的活动分类不存在" });
+            }
+
+            // 更新活动信息
         activity.Title = dto.Title;
         activity.Description = dto.Description;
         activity.StartTime = dto.StartTime;
         activity.EndTime = dto.EndTime;
+            activity.RegistrationDeadline = dto.RegistrationDeadline;
         activity.Location = dto.Location;
         activity.MaxParticipants = dto.MaxParticipants;
+            activity.CategoryId = dto.CategoryId;
         activity.ImageUrl = dto.ImageUrl;
-        // 分类处理（简单按名称查找）
-        if (!string.IsNullOrWhiteSpace(dto.Category))
-        {
-            var category = await _context.Set<ActivityCategory>().FirstOrDefaultAsync(c => c.Name == dto.Category);
-            if (category != null)
-            {
-                activity.CategoryId = category.Id;
-            }
-        }
+            activity.Status = dto.IsPublished ? ActivityStatus.Published : ActivityStatus.Draft;
+            activity.UpdatedAt = DateTime.UtcNow;
+
         await _context.SaveChangesAsync();
         return Ok(new { Message = "活动已更新" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"更新活动失败，活动ID: {id}");
+            return StatusCode(500, new { Message = "更新活动失败", Error = ex.Message });
+        }
     }
 
     /// <summary>
@@ -404,13 +431,13 @@ public class AdminController : ControllerBase
                 return BadRequest(new { Message = "标题和描述不能为空" });
             }
 
-            // 检查分类
-            _logger.LogInformation($"查找分类: {dto.Category}");
-            var category = await _context.Set<ActivityCategory>().FirstOrDefaultAsync(c => c.Name == dto.Category);
+            // 验证分类是否存在
+            _logger.LogInformation($"查找分类ID: {dto.CategoryId}");
+            var category = await _context.ActivityCategories.FindAsync(dto.CategoryId);
             if (category == null)
             {
-                _logger.LogWarning($"分类不存在: {dto.Category}");
-                return BadRequest(new { Message = "分类不存在" });
+                _logger.LogWarning($"分类不存在: CategoryId={dto.CategoryId}");
+                return BadRequest(new { Message = "指定的活动分类不存在" });
             }
             _logger.LogInformation($"找到分类: ID={category.Id}, Name={category.Name}");
 
@@ -423,11 +450,6 @@ public class AdminController : ControllerBase
             if (string.IsNullOrEmpty(userIdClaim))
             {
                 _logger.LogError("JWT中没有找到用户ID相关的claim");
-                _logger.LogInformation("所有可用的claims:");
-                foreach (var claim in User.Claims)
-                {
-                    _logger.LogInformation($"  {claim.Type}: {claim.Value}");
-                }
                 return BadRequest(new { Message = "无法识别当前用户ID" });
             }
 
@@ -450,12 +472,14 @@ public class AdminController : ControllerBase
                 Description = dto.Description,
                 StartTime = dto.StartTime,
                 EndTime = dto.EndTime,
+                RegistrationDeadline = dto.RegistrationDeadline,
                 Location = dto.Location,
                 MaxParticipants = dto.MaxParticipants,
-                CategoryId = category.Id,
+                CategoryId = dto.CategoryId,
                 CreatedBy = userId,
-                CreatedAt = DateTime.Now,
-                Status = ActivityStatus.Draft,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                Status = dto.IsPublished ? ActivityStatus.Published : ActivityStatus.Draft,
                 ImageUrl = dto.ImageUrl
             };
 
@@ -471,6 +495,70 @@ public class AdminController : ControllerBase
         {
             _logger.LogError(ex, "创建活动时发生异常");
             return StatusCode(500, new { Message = "创建活动失败", Error = ex.Message });
+        }
+    }
+
+    #endregion
+
+    #region 活动图片管理
+
+    /// <summary>
+    /// 为所有活动设置随机图片（一次性操作）
+    /// </summary>
+    [HttpPost("activities/seed-images")]
+    public async Task<IActionResult> SeedActivityImages()
+    {
+        try
+        {
+            var activitiesWithoutImages = await _context.Activities
+                .Where(a => string.IsNullOrEmpty(a.ImageUrl))
+                .Include(a => a.Category)
+                .ToListAsync();
+
+            if (!activitiesWithoutImages.Any())
+            {
+                return Ok(new { Message = "所有活动都已有图片", UpdatedCount = 0 });
+            }
+
+            var random = new Random();
+            int updatedCount = 0;
+
+            foreach (var activity in activitiesWithoutImages)
+            {
+                // 根据数据库中的分类名称选择主题关键词
+                var themeKeywords = activity.Category?.Name switch
+                {
+                    "学术讲座" => new[] { "books", "study", "library", "education", "science", "research", "lecture" },
+                    "文艺演出" => new[] { "art", "music", "theater", "painting", "culture", "performance", "stage" },
+                    "体育竞技" => new[] { "sports", "fitness", "running", "basketball", "football", "exercise", "competition" },
+                    "社会实践" => new[] { "volunteer", "help", "community", "service", "care", "charity", "social" },
+                    "创新创业" => new[] { "technology", "computer", "coding", "innovation", "digital", "tech", "startup" },
+                    "交流参观" => new[] { "group", "team", "meeting", "community", "visit", "exchange", "tour" },
+                    _ => new[] { "campus", "students", "university", "activity", "event", "college" }
+                };
+
+                var selectedTheme = themeKeywords[random.Next(themeKeywords.Length)];
+                var seed = random.Next(1, 1000);
+                var width = 600;
+                var height = 400;
+
+                activity.ImageUrl = $"https://picsum.photos/seed/{selectedTheme}-{seed}/{width}/{height}";
+                updatedCount++;
+            }
+
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation($"成功为 {updatedCount} 个活动设置了随机图片");
+            
+            return Ok(new { 
+                Message = $"成功为 {updatedCount} 个活动设置了随机图片",
+                UpdatedCount = updatedCount 
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "设置活动随机图片失败");
+            return StatusCode(500, new { Message = "设置活动随机图片失败", Error = ex.Message });
         }
     }
 

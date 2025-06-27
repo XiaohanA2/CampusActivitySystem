@@ -106,10 +106,13 @@ builder.Services.AddAuthorization(options =>
 // 配置AutoMapper
 builder.Services.AddAutoMapper(typeof(AutoMapperProfile));
 
+// 注册HttpContextAccessor（用于在服务中访问HTTP上下文）
+builder.Services.AddHttpContextAccessor();
+
 // 注册应用服务
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IActivityService, ActivityService>();
+builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IRecommendationService, RecommendationService>();
 builder.Services.AddScoped<IScheduleService, ScheduleService>();
 builder.Services.AddScoped<IUserContextService, UserContextService>();
@@ -167,6 +170,9 @@ else
 }
 
 app.UseCors("AllowBlazorApp");
+
+// 配置静态文件服务（用于图片访问）
+app.UseStaticFiles();
 
 app.UseAuthentication();
 app.UseAuthorization();

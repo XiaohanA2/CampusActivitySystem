@@ -36,6 +36,11 @@ public class Repository<T> : IRepository<T> where T : BaseEntity
         return await _dbSet.Where(e => !e.IsDeleted).FirstOrDefaultAsync(predicate);
     }
 
+    public virtual IQueryable<T> GetQueryable()
+    {
+        return _dbSet.Where(e => !e.IsDeleted);
+    }
+
     public virtual async Task<T> AddAsync(T entity)
     {
         await _dbSet.AddAsync(entity);

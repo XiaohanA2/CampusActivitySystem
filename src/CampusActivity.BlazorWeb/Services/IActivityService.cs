@@ -12,7 +12,6 @@ public interface IActivityService
     Task<bool> RegisterForActivityAsync(int activityId, string? note = null);
     Task<bool> CancelRegistrationAsync(int activityId);
     Task<IEnumerable<ActivityRegistrationDto>?> GetActivityRegistrationsAsync(int activityId);
-    Task<IEnumerable<ActivityDto>?> GetMyRegistrationsAsync();
     Task<IEnumerable<ActivityCategoryDto>?> GetCategoriesAsync();
     Task<IEnumerable<ActivityDto>?> GetPopularActivitiesAsync(int count = 10);
 } 

@@ -257,70 +257,51 @@ public class AdminService : IAdminService
         }
     }
 
+    public async Task<bool> DeleteActivityAsync(int activityId)
+    {
+        var response = await _httpClient.DeleteAsync($"api/admin/activities/{activityId}");
+        return response.IsSuccessStatusCode;
+    }
+
+    public async Task<IEnumerable<ActivityCategoryDto>> GetCategoriesAsync()
+    {
+        var response = await _httpClient.GetAsync("api/activities/categories");
+        if (response.IsSuccessStatusCode)
+        {
+            var content = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<IEnumerable<ActivityCategoryDto>>(content, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            }) ?? new List<ActivityCategoryDto>();
+        }
+        throw new HttpRequestException($"获取活动分类失败: {response.StatusCode}");
+    }
+
     #endregion
 
     #region 系统统计
 
     public async Task<SystemStatisticsDto> GetSystemStatisticsAsync()
     {
-        try
+        var response = await _httpClient.GetAsync("api/admin/statistics");
+        if (response.IsSuccessStatusCode)
         {
-            await SetAuthorizationHeader();
-            var response = await _httpClient.GetAsync("api/admin/statistics");
-
-            if (response.IsSuccessStatusCode)
+            var content = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<SystemStatisticsDto>(content, new JsonSerializerOptions
             {
-                var json = await response.Content.ReadAsStringAsync();
-                var result = JsonSerializer.Deserialize<JsonElement>(json);
-                
-                var statistics = new SystemStatisticsDto();
-                
-                // 基础统计
-                if (result.TryGetProperty("basicStatistics", out var basicStats))
-                {
-                    statistics.BasicStatistics = JsonSerializer.Deserialize<BasicStatistics>(basicStats.GetRawText(), new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
-                }
-                
-                // 最近统计
-                if (result.TryGetProperty("recentStatistics", out var recentStats))
-                {
-                    statistics.RecentStatistics = JsonSerializer.Deserialize<RecentStatistics>(recentStats.GetRawText(), new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
-                }
-                
-                // 用户角色分布
-                if (result.TryGetProperty("userRoleDistribution", out var roleDist))
-                {
-                    statistics.UserRoleDistribution = JsonSerializer.Deserialize<List<RoleDistribution>>(roleDist.GetRawText(), new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
-                }
-                
-                // 热门活动
-                if (result.TryGetProperty("popularActivities", out var popularActivities))
-                {
-                    statistics.PopularActivities = JsonSerializer.Deserialize<List<PopularActivity>>(popularActivities.GetRawText(), new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
-                }
-                
-                // 活动分类统计
-                if (result.TryGetProperty("categoryStatistics", out var categoryStats))
-                {
-                    statistics.CategoryStatistics = JsonSerializer.Deserialize<List<CategoryStatistic>>(categoryStats.GetRawText(), new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
-                }
-                
-                // 每日注册统计
-                if (result.TryGetProperty("dailyRegistrations", out var dailyRegs))
-                {
-                    statistics.DailyRegistrations = JsonSerializer.Deserialize<List<DailyRegistration>>(dailyRegs.GetRawText(), new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
-                }
-                
-                return statistics;
-            }
-
-            _logger.LogError($"获取系统统计信息失败: {response.StatusCode}");
-            return new SystemStatisticsDto();
+                PropertyNameCaseInsensitive = true
+            }) ?? new SystemStatisticsDto();
         }
-        catch (Exception ex)
+        throw new HttpRequestException($"获取系统统计失败: {response.StatusCode}");
+    }
+
+    public async Task SeedActivityImagesAsync()
+    {
+        var response = await _httpClient.PostAsync("api/admin/activities/seed-images", null);
+        if (!response.IsSuccessStatusCode)
         {
-            _logger.LogError(ex, "获取系统统计信息时发生异常");
-            return new SystemStatisticsDto();
+            var errorContent = await response.Content.ReadAsStringAsync();
+            throw new HttpRequestException($"设置活动图片失败: {errorContent}");
         }
     }
 

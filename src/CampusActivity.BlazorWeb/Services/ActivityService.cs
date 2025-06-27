@@ -30,18 +30,16 @@ public class ActivityService : IActivityService
                 queryParams.Add($"keyword={Uri.EscapeDataString(searchDto.Keyword)}");
             if (searchDto.CategoryId.HasValue)
                 queryParams.Add($"categoryId={searchDto.CategoryId}");
-            if (searchDto.Status.HasValue)
-                queryParams.Add($"status={searchDto.Status}");
+                    // 移除了Status参数，该字段已从DTO中删除
             if (searchDto.StartDate.HasValue)
                 queryParams.Add($"startDate={searchDto.StartDate:yyyy-MM-dd}");
             if (searchDto.EndDate.HasValue)
                 queryParams.Add($"endDate={searchDto.EndDate:yyyy-MM-dd}");
-            if (!string.IsNullOrWhiteSpace(searchDto.Location))
-                queryParams.Add($"location={Uri.EscapeDataString(searchDto.Location)}");
+                    // 移除了Location参数，该字段已从DTO中删除
             if (searchDto.IsRegisterable.HasValue)
                 queryParams.Add($"isRegisterable={searchDto.IsRegisterable}");
             
-            queryParams.Add($"pageIndex={searchDto.PageIndex}");
+            queryParams.Add($"page={searchDto.Page}");
             queryParams.Add($"pageSize={searchDto.PageSize}");
             queryParams.Add($"sortBy={searchDto.SortBy}");
             queryParams.Add($"sortDescending={searchDto.SortDescending}");
@@ -202,27 +200,6 @@ public class ActivityService : IActivityService
         return null;
     }
 
-    public async Task<IEnumerable<ActivityDto>?> GetMyRegistrationsAsync()
-    {
-        try
-        {
-            await SetAuthorizationHeader();
-            var response = await _httpClient.GetAsync("api/activities/my-registrations");
-            
-            if (response.IsSuccessStatusCode)
-            {
-                var content = await response.Content.ReadAsStringAsync();
-                return JsonSerializer.Deserialize<IEnumerable<ActivityDto>>(content, _jsonOptions);
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Get my registrations error: {ex.Message}");
-        }
-        
-        return null;
-    }
-
     public async Task<IEnumerable<ActivityCategoryDto>?> GetCategoriesAsync()
     {
         try
@@ -247,17 +224,30 @@ public class ActivityService : IActivityService
     {
         try
         {
+            Console.WriteLine($"正在请求热门活动API: api/activities/popular?count={count}");
             var response = await _httpClient.GetAsync($"api/activities/popular?count={count}");
+            
+            Console.WriteLine($"API响应状态: {response.StatusCode}");
             
             if (response.IsSuccessStatusCode)
             {
                 var content = await response.Content.ReadAsStringAsync();
-                return JsonSerializer.Deserialize<IEnumerable<ActivityDto>>(content, _jsonOptions);
+                Console.WriteLine($"API响应内容: {content}");
+                
+                var activities = JsonSerializer.Deserialize<IEnumerable<ActivityDto>>(content, _jsonOptions);
+                Console.WriteLine($"反序列化后的活动数量: {activities?.Count() ?? 0}");
+                return activities;
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"API请求失败: {response.StatusCode}, 错误内容: {errorContent}");
             }
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Get popular activities error: {ex.Message}");
+            Console.WriteLine($"Exception details: {ex}");
         }
         
         return null;

@@ -314,6 +314,42 @@
                 </div>
             </div>
         </div>
+
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0">
+                        <i class="oi oi-image me-2"></i>图片管理
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">为没有图片的活动自动设置精美的随机图片，图片会根据活动分类智能匹配主题。</p>
+                    <button class="btn btn-info w-100 mb-2" @onclick="SeedActivityImages" disabled="@isSeeding">
+                        @if (isSeeding)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            <span>正在设置图片...</span>
+                        }
+                        else
+                        {
+                            <i class="oi oi-aperture me-2"></i>
+                            <span>智能设置活动图片</span>
+                        }
+                    </button>
+                    @if (!string.IsNullOrEmpty(seedMessage))
+                    {
+                        <div class="alert @(seedMessage.Contains("成功") ? "alert-success" : "alert-warning") alert-sm">
+                            <i class="oi @(seedMessage.Contains("成功") ? "oi-check" : "oi-warning") me-1"></i>
+                            @seedMessage
+                        </div>
+                    }
+                    <small class="text-muted">
+                        <i class="oi oi-info me-1"></i>
+                        图片来源于Lorem Picsum，会根据活动类别自动匹配主题（如学术、体育、文艺等）
+                    </small>
+                </div>
+            </div>
+        </div>
     }
 </div>
 
@@ -500,6 +536,8 @@
 @code {
     private SystemStatisticsDto statistics = new();
     private bool isLoading = true;
+    private bool isSeeding = false;
+    private string seedMessage = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -578,5 +616,25 @@
     {
         var icons = new[] { "oi-people", "oi-calendar", "oi-list-rich", "oi-star" };
         return icons[index % icons.Length];
+    }
+
+    private async Task SeedActivityImages()
+    {
+        isSeeding = true;
+        seedMessage = "正在设置活动图片...";
+        try
+        {
+            await AdminService.SeedActivityImagesAsync();
+            await LoadStatistics();
+            seedMessage = "活动图片设置成功！";
+        }
+        catch (Exception ex)
+        {
+            seedMessage = $"设置活动图片失败: {ex.Message}";
+        }
+        finally
+        {
+            isSeeding = false;
+        }
     }
 } 
