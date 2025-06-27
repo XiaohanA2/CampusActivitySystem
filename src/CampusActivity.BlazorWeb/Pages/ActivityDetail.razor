@@ -1,9 +1,12 @@
 @page "/activities/{Id:int}"
 @using CampusActivity.Shared.DTOs
+@using CampusActivity.Shared.Constants
+@using System.Security.Claims
 @inject IActivityService ActivityService
 @inject IScheduleService ScheduleService
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <PageTitle>@(activity?.Title ?? "活动详情")</PageTitle>
 
@@ -309,9 +312,12 @@
     private bool showRegistrationModal = false;
     private string registrationNote = "";
     private bool addToScheduleOnRegister = true;
+    private ClaimsPrincipal? currentUser;
 
     protected override async Task OnInitializedAsync()
     {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        currentUser = authState.User;
         await LoadActivity();
     }
 
@@ -335,6 +341,12 @@
     private bool CanRegister()
     {
         if (activity == null) return false;
+        
+        // 检查用户角色 - 管理员不能报名活动
+        if (currentUser?.IsInRole(AppConstants.Roles.Admin) == true)
+        {
+            return false;
+        }
         
         return activity.Status == ActivityStatus.Published &&
                activity.RegistrationDeadline > DateTime.Now &&
@@ -466,11 +478,26 @@
 
     private string GetRegistrationStatusMessage()
     {
-        if (activity == null) return "活动不存在";
+        if (currentUser?.IsInRole(AppConstants.Roles.Admin) == true)
+        {
+            return "管理员不能报名活动";
+        }
         
-        if (activity.RegistrationDeadline <= DateTime.Now) return "报名已截止";
-        if (activity.CurrentParticipants >= activity.MaxParticipants) return "活动已满员";
-        if (activity.Status != ActivityStatus.Published) return "活动未发布";
+        if (activity?.Status != ActivityStatus.Published)
+        {
+            return "活动未发布";
+        }
+        
+        if (activity?.RegistrationDeadline <= DateTime.Now)
+        {
+            return "报名已截止";
+        }
+        
+        if (activity?.CurrentParticipants >= activity?.MaxParticipants)
+        {
+            return "活动名额已满";
+        }
+        
         return "无法报名";
     }
 

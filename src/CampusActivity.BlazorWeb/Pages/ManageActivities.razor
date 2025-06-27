@@ -1,0 +1,275 @@
+@page "/manage-activities"
+@using CampusActivity.BlazorWeb.Services
+@using CampusActivity.Shared.DTOs
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Teacher,Admin")]
+@inject IAdminService AdminService
+@inject IJSRuntime JSRuntime
+
+<PageTitle>管理活动 - 校园活动系统</PageTitle>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0">
+                    <i class="oi oi-pencil"></i> 管理活动
+                </h2>
+                <div class="btn-group">
+                    <a href="/activities/create" class="btn btn-primary">
+                        <i class="oi oi-plus"></i> 创建新活动
+                    </a>
+                    <button class="btn btn-outline-secondary" @onclick="RefreshData">
+                        <i class="oi oi-reload"></i> 刷新
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 搜索和过滤 -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="input-group">
+                <input type="text" class="form-control" placeholder="搜索活动名称..." 
+                       @bind="searchTerm" @bind:event="oninput" @onkeyup="OnSearchKeyUp" />
+                <button class="btn btn-outline-secondary" type="button" @onclick="SearchActivities">
+                    <i class="oi oi-magnifying-glass"></i>
+                </button>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <select class="form-select" @bind="selectedStatus">
+                <option value="">所有状态</option>
+                <option value="draft">草稿</option>
+                <option value="published">已发布</option>
+                <option value="upcoming">即将开始</option>
+                <option value="ongoing">进行中</option>
+                <option value="completed">已结束</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <button class="btn btn-outline-primary w-100" @onclick="ApplyFilters">
+                应用过滤
+            </button>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">加载中...</span>
+            </div>
+            <p class="mt-2">正在加载活动列表...</p>
+        </div>
+    }
+    else if (activities.Items?.Any() == true)
+    {
+        <!-- 活动列表 -->
+        <div class="row">
+            @foreach (var activity in activities.Items)
+            {
+                <div class="col-lg-6 col-xl-4 mb-4">
+                    <div class="card shadow h-100">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0 text-truncate">@activity.Title</h6>
+                            <span class="badge @GetStatusBadgeClass(activity)">
+                                @GetStatusText(activity)
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text text-muted small">@(activity.Description.Length > 100 ? activity.Description.Substring(0, 100) + "..." : activity.Description)</p>
+                            
+                            <div class="row text-center mb-3">
+                                <div class="col-6">
+                                    <small class="text-muted">开始时间</small><br>
+                                    <strong>@activity.StartTime.ToString("MM-dd HH:mm")</strong>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted">报名人数</small><br>
+                                    <strong class="text-primary">@activity.RegistrationCount/@activity.MaxParticipants</strong>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">
+                                    <i class="oi oi-map-marker"></i> @activity.Location
+                                </small>
+                                <small class="text-muted">
+                                    <i class="oi oi-person"></i> @activity.Creator
+                                </small>
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <div class="btn-group w-100" role="group">
+                                <a href="/activities/@activity.Id" class="btn btn-outline-primary btn-sm">
+                                    <i class="oi oi-eye"></i> 查看
+                                </a>
+                                <a href="/manage-activities/edit/@activity.Id" class="btn btn-outline-warning btn-sm">
+                                    <i class="oi oi-pencil"></i> 编辑
+                                </a>
+                                <button class="btn btn-outline-danger btn-sm" @onclick="() => DeleteActivity(activity.Id)">
+                                    <i class="oi oi-trash"></i> 删除
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- 分页 -->
+        @if (activities.TotalPages > 1)
+        {
+            <div class="row">
+                <div class="col-12">
+                    <nav aria-label="活动列表分页">
+                        <ul class="pagination justify-content-center">
+                            <li class="page-item @(currentPage <= 1 ? "disabled" : "")">
+                                <button class="page-link" @onclick="() => ChangePage(currentPage - 1)" disabled="@(currentPage <= 1)">
+                                    上一页
+                                </button>
+                            </li>
+                            
+                            @for (int i = Math.Max(1, currentPage - 2); i <= Math.Min(activities.TotalPages, currentPage + 2); i++)
+                            {
+                                <li class="page-item @(i == currentPage ? "active" : "")">
+                                    <button class="page-link" @onclick="() => ChangePage(i)">@i</button>
+                                </li>
+                            }
+                            
+                            <li class="page-item @(currentPage >= activities.TotalPages ? "disabled" : "")">
+                                <button class="page-link" @onclick="() => ChangePage(currentPage + 1)" disabled="@(currentPage >= activities.TotalPages)">
+                                    下一页
+                                </button>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="text-center py-5">
+            <i class="oi oi-calendar display-1 text-muted"></i>
+            <h4 class="mt-3 text-muted">暂无活动</h4>
+            <p class="text-muted">您还没有创建任何活动，或者当前过滤条件下没有找到活动。</p>
+            <a href="/activities/create" class="btn btn-primary">
+                <i class="oi oi-plus"></i> 创建第一个活动
+            </a>
+        </div>
+    }
+</div>
+
+@code {
+    private PagedResult<AdminActivityDto> activities = new();
+    private bool isLoading = true;
+    private int currentPage = 1;
+    private string searchTerm = "";
+    private string selectedStatus = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadActivities();
+    }
+
+    private async Task LoadActivities()
+    {
+        isLoading = true;
+        try
+        {
+            activities = await AdminService.GetAllActivitiesAsync(currentPage, 12, searchTerm, null, selectedStatus);
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"加载活动列表失败: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task RefreshData()
+    {
+        currentPage = 1;
+        await LoadActivities();
+    }
+
+    private async Task SearchActivities()
+    {
+        currentPage = 1;
+        await LoadActivities();
+    }
+
+    private async Task ApplyFilters()
+    {
+        currentPage = 1;
+        await LoadActivities();
+    }
+
+    private async Task ChangePage(int page)
+    {
+        currentPage = page;
+        await LoadActivities();
+    }
+
+    private void OnSearchKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            _ = SearchActivities();
+        }
+    }
+
+    private async Task DeleteActivity(int activityId)
+    {
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "确定要删除这个活动吗？此操作不可撤销。");
+        if (confirmed)
+        {
+            try
+            {
+                var success = await AdminService.ForceDeleteActivityAsync(activityId);
+                if (success)
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", "活动已删除");
+                    await LoadActivities();
+                }
+                else
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", "删除活动失败");
+                }
+            }
+            catch (Exception ex)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", $"删除活动时发生错误: {ex.Message}");
+            }
+        }
+    }
+
+    private string GetStatusText(AdminActivityDto activity)
+    {
+        var now = DateTime.Now;
+        if (!activity.IsPublished)
+            return "草稿";
+        if (activity.StartTime > now)
+            return "即将开始";
+        if (activity.StartTime <= now && activity.EndTime >= now)
+            return "进行中";
+        return "已结束";
+    }
+
+    private string GetStatusBadgeClass(AdminActivityDto activity)
+    {
+        var now = DateTime.Now;
+        if (!activity.IsPublished)
+            return "badge-secondary";
+        if (activity.StartTime > now)
+            return "badge-info";
+        if (activity.StartTime <= now && activity.EndTime >= now)
+            return "badge-success";
+        return "badge-warning";
+    }
+} 

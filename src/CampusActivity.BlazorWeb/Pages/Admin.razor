@@ -118,33 +118,21 @@
             <div class="col-12">
                 <div class="card shadow">
                     <div class="card-header py-3">
-                        <h6 class="m-0 font-weight-bold text-primary">快捷操作</h6>
+                        <h6 class="m-0 font-weight-bold text-white">快捷操作</h6>
                     </div>
                     <div class="card-body">
                         <div class="row">
-                            <div class="col-md-3 mb-3">
+                            <div class="col-md-6 mb-3">
                                 <a href="/admin/users" class="btn btn-outline-primary btn-block">
                                     <i class="oi oi-people"></i><br>
                                     用户管理
                                 </a>
                             </div>
-                            <div class="col-md-3 mb-3">
-                                <a href="/admin/activities" class="btn btn-outline-success btn-block">
-                                    <i class="oi oi-calendar"></i><br>
-                                    活动管理
-                                </a>
-                            </div>
-                            <div class="col-md-3 mb-3">
+                            <div class="col-md-6 mb-3">
                                 <a href="/activities/create" class="btn btn-outline-info btn-block">
                                     <i class="oi oi-plus"></i><br>
                                     创建活动
                                 </a>
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <button class="btn btn-outline-warning btn-block" @onclick="ExportData">
-                                    <i class="oi oi-data-transfer-download"></i><br>
-                                    导出数据
-                                </button>
                             </div>
                         </div>
                     </div>
@@ -157,14 +145,45 @@
             <div class="col-xl-4 col-lg-6 mb-4">
                 <div class="card shadow">
                     <div class="card-header py-3">
-                        <h6 class="m-0 font-weight-bold text-primary">用户角色分布</h6>
+                        <h6 class="m-0 font-weight-bold text-white">
+                            <i class="oi oi-people me-2"></i>用户角色分布
+                        </h6>
                     </div>
                     <div class="card-body">
-                        @foreach (var role in statistics.UserRoleDistribution)
+                        @if (statistics.UserRoleDistribution?.Any() == true)
                         {
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="text-sm">@GetRoleName(role.Role)</span>
-                                <span class="badge badge-primary">@role.Count</span>
+                            var totalUsers = statistics.UserRoleDistribution.Sum(r => r.Count);
+                            @foreach (var role in statistics.UserRoleDistribution)
+                            {
+                                var percentage = totalUsers > 0 ? (double)role.Count / totalUsers * 100 : 0;
+                                var roleColor = GetRoleColor(role.Role);
+                                <div class="role-item mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <div class="d-flex align-items-center">
+                                            <div class="role-icon me-2" style="background-color: @roleColor;">
+                                                <i class="oi @GetRoleIcon(role.Role)"></i>
+                                            </div>
+                                            <span class="fw-bold">@GetRoleName(role.Role)</span>
+                                        </div>
+                                        <div class="text-end">
+                                            <div class="h5 mb-0 fw-bold" style="color: @roleColor;">@role.Count</div>
+                                            <small class="text-muted">@percentage.ToString("F1")%</small>
+                                        </div>
+                                    </div>
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar" role="progressbar" 
+                                             style="width: @percentage%; background-color: @roleColor;" 
+                                             aria-valuenow="@percentage" aria-valuemin="0" aria-valuemax="100">
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="text-center py-4">
+                                <i class="oi oi-people display-4 text-muted"></i>
+                                <p class="text-muted mt-2">暂无用户角色分布数据</p>
                             </div>
                         }
                     </div>
@@ -175,35 +194,60 @@
             <div class="col-xl-8 col-lg-6 mb-4">
                 <div class="card shadow">
                     <div class="card-header py-3">
-                        <h6 class="m-0 font-weight-bold text-primary">热门活动 Top 5</h6>
+                        <h6 class="m-0 font-weight-bold text-white">
+                            <i class="oi oi-star me-2"></i>热门活动 Top 5
+                        </h6>
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
-                            <table class="table table-sm">
-                                <thead>
-                                    <tr>
-                                        <th>活动名称</th>
-                                        <th>开始时间</th>
-                                        <th>报名人数</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var activity in statistics.PopularActivities.Take(5))
-                                    {
+                            @if (statistics.PopularActivities?.Any() == true)
+                            {
+                                <table class="table table-hover">
+                                    <thead class="table-light">
                                         <tr>
-                                            <td>
-                                                <a href="/activities/@activity.Id" class="text-decoration-none">
-                                                    @activity.Title
-                                                </a>
-                                            </td>
-                                            <td>@activity.StartTime.ToString("MM-dd HH:mm")</td>
-                                            <td>
-                                                <span class="badge badge-success">@activity.RegistrationCount</span>
-                                            </td>
+                                            <th>排名</th>
+                                            <th>活动名称</th>
+                                            <th>开始时间</th>
+                                            <th class="text-center">报名人数</th>
                                         </tr>
-                                    }
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                        @for (int i = 0; i < statistics.PopularActivities.Take(5).Count(); i++)
+                                        {
+                                            var activity = statistics.PopularActivities.ElementAt(i);
+                                            var rankColor = GetRankColor(i);
+                                            <tr>
+                                                <td>
+                                                    <div class="rank-badge" style="background-color: @rankColor;">
+                                                        @(i + 1)
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <a href="/activities/@activity.Id" class="text-decoration-none fw-bold">
+                                                        @activity.Title
+                                                    </a>
+                                                </td>
+                                                <td>
+                                                    <i class="oi oi-calendar me-1 text-muted"></i>
+                                                    @activity.StartTime.ToString("MM-dd HH:mm")
+                                                </td>
+                                                <td class="text-center">
+                                                    <span class="registration-count" style="background-color: @rankColor;">
+                                                        @activity.RegistrationCount
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            }
+                            else
+                            {
+                                <div class="text-center py-4">
+                                    <i class="oi oi-calendar display-4 text-muted"></i>
+                                    <p class="text-muted mt-2">暂无热门活动数据</p>
+                                </div>
+                            }
                         </div>
                     </div>
                 </div>
@@ -215,20 +259,53 @@
             <div class="col-12">
                 <div class="card shadow">
                     <div class="card-header py-3">
-                        <h6 class="m-0 font-weight-bold text-primary">活动分类统计</h6>
+                        <h6 class="m-0 font-weight-bold text-white">
+                            <i class="oi oi-tags me-2"></i>活动分类统计
+                        </h6>
                     </div>
                     <div class="card-body">
                         <div class="row">
-                            @foreach (var category in statistics.CategoryStatistics)
+                            @if (statistics.CategoryStatistics?.Any() == true)
                             {
-                                <div class="col-md-3 mb-3">
-                                    <div class="card border-left-secondary">
-                                        <div class="card-body py-2">
-                                            <div class="d-flex justify-content-between">
-                                                <span class="text-sm">@category.Category</span>
-                                                <span class="badge badge-secondary">@category.Count</span>
+                                var maxCount = statistics.CategoryStatistics.Max(c => c.Count);
+                                @for (int i = 0; i < statistics.CategoryStatistics.Count(); i++)
+                                {
+                                    var category = statistics.CategoryStatistics.ElementAt(i);
+                                    var percentage = maxCount > 0 ? (double)category.Count / maxCount * 100 : 0;
+                                    var categoryColor = GetCategoryColor(i);
+                                    <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+                                        <div class="category-card" style="border-left: 4px solid @categoryColor;">
+                                            <div class="category-content">
+                                                <div class="category-header">
+                                                    <div class="category-icon" style="background-color: @categoryColor;">
+                                                        <i class="oi @GetCategoryIcon(i)"></i>
+                                                    </div>
+                                                    <div class="category-info">
+                                                        <h6 class="category-name mb-1">@category.Category</h6>
+                                                        <div class="category-count" style="color: @categoryColor;">
+                                                            @category.Count 个活动
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="category-progress mt-3">
+                                                    <div class="progress" style="height: 6px;">
+                                                        <div class="progress-bar" role="progressbar" 
+                                                             style="width: @percentage%; background-color: @categoryColor;" 
+                                                             aria-valuenow="@percentage" aria-valuemin="0" aria-valuemax="100">
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <div class="col-12">
+                                    <div class="text-center py-4">
+                                        <i class="oi oi-tags display-4 text-muted"></i>
+                                        <p class="text-muted mt-2">暂无活动分类数据</p>
                                     </div>
                                 </div>
                             }
@@ -270,6 +347,154 @@
         padding: 1rem;
         height: auto;
     }
+
+    /* 角色分布样式 */
+    .role-item {
+        padding: 0.5rem;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+    .role-item:hover {
+        background-color: #f8f9fc;
+    }
+    .role-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 14px;
+    }
+    .progress {
+        background-color: #e3e6f0;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    .progress-bar {
+        border-radius: 10px;
+        transition: width 0.6s ease;
+    }
+
+    /* 热门活动样式 */
+    .rank-badge {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 12px;
+        margin: 0 auto;
+    }
+    .registration-count {
+        padding: 6px 12px;
+        border-radius: 20px;
+        color: white;
+        font-weight: bold;
+        font-size: 14px;
+        display: inline-block;
+        min-width: 40px;
+        text-align: center;
+    }
+    .table-hover tbody tr:hover {
+        background-color: #f8f9fc;
+        transform: translateY(-1px);
+        transition: all 0.2s ease;
+    }
+
+    /* 分类统计样式 */
+    .category-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        height: 100%;
+    }
+    .category-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    .category-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+    .category-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 20px;
+        margin-right: 1rem;
+    }
+    .category-info {
+        flex: 1;
+    }
+    .category-name {
+        font-weight: 600;
+        color: #2c3e50;
+        margin: 0;
+    }
+    .category-count {
+        font-size: 18px;
+        font-weight: bold;
+        margin-top: 0.25rem;
+    }
+    .category-progress .progress {
+        background-color: #e9ecef;
+        border-radius: 10px;
+    }
+    .category-progress .progress-bar {
+        border-radius: 10px;
+        transition: width 0.8s ease;
+    }
+
+    /* 统计卡片增强 */
+    .card {
+        border: none;
+        border-radius: 15px;
+        overflow: hidden;
+    }
+    .card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 1.25rem 1.5rem;
+    }
+    .card-header h6 {
+        margin: 0;
+        font-size: 1.1rem;
+    }
+    .card-body {
+        padding: 1.5rem;
+    }
+
+    /* 数字强调 */
+    .h5.mb-0.fw-bold {
+        font-size: 2rem;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    /* 响应式优化 */
+    @@media (max-width: 768px) {
+        .category-card {
+            margin-bottom: 1rem;
+        }
+        .role-item {
+            padding: 0.75rem;
+        }
+        .h5.mb-0.fw-bold {
+            font-size: 1.5rem;
+        }
+    }
 </style>
 
 @code {
@@ -304,11 +529,6 @@
         await JSRuntime.InvokeVoidAsync("alert", "数据已刷新");
     }
 
-    private async Task ExportData()
-    {
-        await JSRuntime.InvokeVoidAsync("alert", "数据导出功能开发中...");
-    }
-
     private string GetRoleName(string role)
     {
         return role switch
@@ -318,5 +538,45 @@
             "Admin" => "管理员",
             _ => role
         };
+    }
+
+    private string GetRoleColor(string role)
+    {
+        return role switch
+        {
+            "Student" => "#4e73df",
+            "Teacher" => "#1cc88a",
+            "Admin" => "#36b9cc",
+            _ => "#858796"
+        };
+    }
+
+    private string GetRoleIcon(string role)
+    {
+        return role switch
+        {
+            "Student" => "oi-people",
+            "Teacher" => "oi-people",
+            "Admin" => "oi-people",
+            _ => "oi-people"
+        };
+    }
+
+    private string GetRankColor(int index)
+    {
+        var colors = new[] { "#4e73df", "#1cc88a", "#36b9cc", "#f6c23e" };
+        return colors[index % colors.Length];
+    }
+
+    private string GetCategoryColor(int index)
+    {
+        var colors = new[] { "#4e73df", "#1cc88a", "#36b9cc", "#f6c23e" };
+        return colors[index % colors.Length];
+    }
+
+    private string GetCategoryIcon(int index)
+    {
+        var icons = new[] { "oi-people", "oi-calendar", "oi-list-rich", "oi-star" };
+        return icons[index % icons.Length];
     }
 } 

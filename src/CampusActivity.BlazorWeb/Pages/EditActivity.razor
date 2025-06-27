@@ -1,0 +1,186 @@
+@page "/manage-activities/edit/{ActivityId:int}"
+@using CampusActivity.BlazorWeb.Services
+@using CampusActivity.Shared.DTOs
+@inject IAdminService AdminService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+<PageTitle>编辑活动</PageTitle>
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            @if (isLoading)
+            {
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">加载中...</span>
+                    </div>
+                    <p class="mt-2">正在加载活动信息...</p>
+                </div>
+            }
+            else if (activity == null)
+            {
+                <div class="alert alert-danger">
+                    <h5><i class="oi oi-warning me-2"></i>未找到该活动</h5>
+                    <p>您要编辑的活动不存在或已被删除。</p>
+                    <a href="/manage-activities" class="btn btn-primary">返回活动管理</a>
+                </div>
+            }
+            else
+            {
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0"><i class="oi oi-pencil me-2"></i>编辑活动</h4>
+                    </div>
+                    <div class="card-body">
+                        <EditForm Model="activity" OnValidSubmit="HandleValidSubmit">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary />
+                            
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">活动标题 <span class="text-danger">*</span></label>
+                                <InputText class="form-control" @bind-Value="activity.Title" placeholder="请输入活动标题..." required />
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">活动描述 <span class="text-danger">*</span></label>
+                                <InputTextArea class="form-control" @bind-Value="activity.Description" rows="4" placeholder="请输入活动详细描述..." required />
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">活动图片URL</label>
+                                <div class="input-group">
+                                    <InputText class="form-control" @bind-Value="activity.ImageUrl" placeholder="请输入图片URL地址..." />
+                                    <button class="btn btn-outline-secondary" type="button" @onclick="PreviewImage">
+                                        <i class="oi oi-eye"></i> 预览
+                                    </button>
+                                </div>
+                                <small class="text-muted">支持jpg、png、gif等格式的图片链接</small>
+                            </div>
+                            
+                            @if (!string.IsNullOrEmpty(activity.ImageUrl))
+                            {
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">图片预览</label>
+                                    <div class="text-center">
+                                        <img src="@activity.ImageUrl" class="img-fluid rounded" style="max-height: 200px; max-width: 100%;"
+                                             alt="活动图片预览" />
+                                    </div>
+                                </div>
+                            }
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">开始时间 <span class="text-danger">*</span></label>
+                                    <InputDate class="form-control" @bind-Value="activity.StartTime" required />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">结束时间 <span class="text-danger">*</span></label>
+                                    <InputDate class="form-control" @bind-Value="activity.EndTime" required />
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">活动地点 <span class="text-danger">*</span></label>
+                                <InputText class="form-control" @bind-Value="activity.Location" placeholder="请输入活动地点..." required />
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">最大报名人数 <span class="text-danger">*</span></label>
+                                <InputNumber class="form-control" @bind-Value="activity.MaxParticipants" min="1" required />
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">活动分类 <span class="text-danger">*</span></label>
+                                <InputText class="form-control" @bind-Value="activity.Category" placeholder="请输入活动分类..." required />
+                            </div>
+                            
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-primary" type="submit" disabled="@isSaving">
+                                    @if (isSaving)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                        <span>保存中...</span>
+                                    }
+                                    else
+                                    {
+                                        <i class="oi oi-check me-2"></i>
+                                        <span>保存修改</span>
+                                    }
+                                </button>
+                                <button class="btn btn-secondary" type="button" @onclick="GoBack" disabled="@isSaving">
+                                    <i class="oi oi-arrow-left me-2"></i>返回
+                                </button>
+                            </div>
+                        </EditForm>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int ActivityId { get; set; }
+
+    private AdminActivityDto? activity;
+    private bool isLoading = true;
+    private bool isSaving = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        try
+        {
+            activity = await AdminService.GetActivityByIdAsync(ActivityId);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"加载活动失败: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        isSaving = true;
+        try
+        {
+            var success = await AdminService.UpdateActivityAsync(activity!);
+            if (success)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "活动更新成功！");
+                Navigation.NavigateTo("/manage-activities");
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "活动更新失败，请检查控制台日志");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"更新活动异常: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("alert", $"更新活动时发生错误: {ex.Message}");
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/manage-activities");
+    }
+
+    private void PreviewImage()
+    {
+        // 触发UI更新以显示图片预览
+        StateHasChanged();
+    }
+} 

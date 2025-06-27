@@ -6,6 +6,7 @@ using CampusActivity.Shared.DTOs;
 using CampusActivity.Shared.Constants;
 using CampusActivity.Domain.Entities;
 using AutoMapper;
+using System.Text.Json;
 
 namespace CampusActivity.WebAPI.Controllers;
 
@@ -95,7 +96,10 @@ public class AdminController : ControllerBase
             }
 
             // 防止禁用自己
-            var currentUserId = int.Parse(User.FindFirst("id")?.Value ?? "0");
+            var currentUserIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                                  ?? User.FindFirst("sub")?.Value
+                                  ?? User.FindFirst("id")?.Value;
+            var currentUserId = int.Parse(currentUserIdClaim ?? "0");
             if (user.Id == currentUserId)
             {
                 return BadRequest(new { Message = "不能禁用自己的账户" });
@@ -160,7 +164,10 @@ public class AdminController : ControllerBase
             }
 
             // 防止删除自己
-            var currentUserId = int.Parse(User.FindFirst("id")?.Value ?? "0");
+            var currentUserIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                                  ?? User.FindFirst("sub")?.Value
+                                  ?? User.FindFirst("id")?.Value;
+            var currentUserId = int.Parse(currentUserIdClaim ?? "0");
             if (user.Id == currentUserId)
             {
                 return BadRequest(new { Message = "不能删除自己的账户" });
@@ -313,6 +320,157 @@ public class AdminController : ControllerBase
         {
             _logger.LogError(ex, $"删除活动失败，活动ID: {id}");
             return StatusCode(500, new { Message = "删除活动失败", Error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// 获取单个活动详情
+    /// </summary>
+    [HttpGet("activities/{id}")]
+    public async Task<ActionResult<AdminActivityDto>> GetActivityById(int id)
+    {
+        var activity = await _context.Activities
+            .Include(a => a.Category)
+            .Include(a => a.Creator)
+            .FirstOrDefaultAsync(a => a.Id == id);
+        if (activity == null)
+        {
+            return NotFound(new { Message = "活动不存在" });
+        }
+        var dto = new AdminActivityDto
+        {
+            Id = activity.Id,
+            Title = activity.Title,
+            Description = activity.Description,
+            StartTime = activity.StartTime,
+            EndTime = activity.EndTime,
+            Location = activity.Location,
+            MaxParticipants = activity.MaxParticipants,
+            IsPublished = activity.Status == ActivityStatus.Published,
+            CreatedAt = activity.CreatedAt,
+            Category = activity.Category?.Name ?? string.Empty,
+            Creator = activity.Creator?.FullName ?? string.Empty,
+            RegistrationCount = await _context.ActivityRegistrations.CountAsync(r => r.ActivityId == activity.Id)
+        };
+        return Ok(dto);
+    }
+
+    /// <summary>
+    /// 更新活动
+    /// </summary>
+    [HttpPut("activities/{id}")]
+    public async Task<IActionResult> UpdateActivity(int id, [FromBody] AdminActivityDto dto)
+    {
+        var activity = await _context.Activities.Include(a => a.Category).FirstOrDefaultAsync(a => a.Id == id);
+        if (activity == null)
+        {
+            return NotFound(new { Message = "活动不存在" });
+        }
+        // 只允许管理员修改部分字段
+        activity.Title = dto.Title;
+        activity.Description = dto.Description;
+        activity.StartTime = dto.StartTime;
+        activity.EndTime = dto.EndTime;
+        activity.Location = dto.Location;
+        activity.MaxParticipants = dto.MaxParticipants;
+        activity.ImageUrl = dto.ImageUrl;
+        // 分类处理（简单按名称查找）
+        if (!string.IsNullOrWhiteSpace(dto.Category))
+        {
+            var category = await _context.Set<ActivityCategory>().FirstOrDefaultAsync(c => c.Name == dto.Category);
+            if (category != null)
+            {
+                activity.CategoryId = category.Id;
+            }
+        }
+        await _context.SaveChangesAsync();
+        return Ok(new { Message = "活动已更新" });
+    }
+
+    /// <summary>
+    /// 创建新活动
+    /// </summary>
+    [HttpPost("activities")]
+    public async Task<IActionResult> CreateActivity([FromBody] AdminActivityDto dto)
+    {
+        try
+        {
+            _logger.LogInformation("=== 开始创建活动 ===");
+            _logger.LogInformation($"接收到的活动数据: {JsonSerializer.Serialize(dto)}");
+            
+            if (string.IsNullOrWhiteSpace(dto.Title) || string.IsNullOrWhiteSpace(dto.Description))
+            {
+                _logger.LogWarning("标题或描述为空");
+                return BadRequest(new { Message = "标题和描述不能为空" });
+            }
+
+            // 检查分类
+            _logger.LogInformation($"查找分类: {dto.Category}");
+            var category = await _context.Set<ActivityCategory>().FirstOrDefaultAsync(c => c.Name == dto.Category);
+            if (category == null)
+            {
+                _logger.LogWarning($"分类不存在: {dto.Category}");
+                return BadRequest(new { Message = "分类不存在" });
+            }
+            _logger.LogInformation($"找到分类: ID={category.Id}, Name={category.Name}");
+
+            // 获取用户ID
+            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                           ?? User.FindFirst("sub")?.Value
+                           ?? User.FindFirst("id")?.Value;
+            _logger.LogInformation($"从JWT中获取的用户ID: {userIdClaim}");
+            
+            if (string.IsNullOrEmpty(userIdClaim))
+            {
+                _logger.LogError("JWT中没有找到用户ID相关的claim");
+                _logger.LogInformation("所有可用的claims:");
+                foreach (var claim in User.Claims)
+                {
+                    _logger.LogInformation($"  {claim.Type}: {claim.Value}");
+                }
+                return BadRequest(new { Message = "无法识别当前用户ID" });
+            }
+
+            var userId = int.Parse(userIdClaim);
+            _logger.LogInformation($"最终使用的用户ID: {userId}");
+
+            // 验证用户是否存在
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+            {
+                _logger.LogError($"用户不存在: ID={userId}");
+                return BadRequest(new { Message = $"用户不存在: ID={userId}" });
+            }
+            _logger.LogInformation($"找到用户: ID={user.Id}, Username={user.Username}, Role={user.Role}");
+
+            // 创建活动
+            var activity = new Activity
+            {
+                Title = dto.Title,
+                Description = dto.Description,
+                StartTime = dto.StartTime,
+                EndTime = dto.EndTime,
+                Location = dto.Location,
+                MaxParticipants = dto.MaxParticipants,
+                CategoryId = category.Id,
+                CreatedBy = userId,
+                CreatedAt = DateTime.Now,
+                Status = ActivityStatus.Draft,
+                ImageUrl = dto.ImageUrl
+            };
+
+            _logger.LogInformation($"准备保存活动: {JsonSerializer.Serialize(activity)}");
+            
+            _context.Activities.Add(activity);
+            await _context.SaveChangesAsync();
+            
+            _logger.LogInformation($"活动创建成功: ID={activity.Id}");
+            return Ok(new { Message = "活动已创建", Id = activity.Id });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "创建活动时发生异常");
+            return StatusCode(500, new { Message = "创建活动失败", Error = ex.Message });
         }
     }
 

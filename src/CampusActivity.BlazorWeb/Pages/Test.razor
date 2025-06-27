@@ -3,7 +3,11 @@
 @using CampusActivity.Shared.Enums
 @inject IScheduleService ScheduleService
 @inject IAuthService AuthService
+@inject IAdminService AdminService
 @inject IJSRuntime JSRuntime
+@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <PageTitle>API测试</PageTitle>
 
@@ -42,11 +46,79 @@
                     <button class="btn btn-info" @onclick="TestGetStatistics">
                         测试获取统计
                     </button>
+                    <br />
+                    <button class="btn btn-warning" @onclick="TestCreateActivity">
+                        测试创建活动
+                    </button>
                 </div>
             </div>
         </div>
     </div>
     
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>用户认证信息</h5>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <button class="btn btn-primary" @onclick="RefreshAuthState">刷新认证状态</button>
+                <button class="btn btn-secondary" @onclick="ClearAuthData">清除认证数据</button>
+                <button class="btn btn-success" @onclick="TestLoginWithAdmin2">使用admin2登录</button>
+            </div>
+            
+            <AuthorizeView>
+                <Authorized>
+                    <p><strong>用户名:</strong> @context.User.Identity?.Name</p>
+                    <p><strong>用户ID:</strong> @context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value</p>
+                    <p><strong>邮箱:</strong> @context.User.FindFirst(ClaimTypes.Email)?.Value</p>
+                    <p><strong>姓名:</strong> @context.User.FindFirst("FullName")?.Value</p>
+                    <p><strong>角色:</strong> @context.User.FindFirst(ClaimTypes.Role)?.Value</p>
+                    
+                    <h6>所有声明:</h6>
+                    <ul>
+                        @foreach (var claim in context.User.Claims)
+                        {
+                            <li><strong>@claim.Type:</strong> @claim.Value</li>
+                        }
+                    </ul>
+                    
+                    <div class="mt-3">
+                        <h6>权限测试:</h6>
+                        <AuthorizeView Roles="Student" Context="studentContext">
+                            <Authorized>
+                                <div class="alert alert-success">✅ 学生权限验证通过</div>
+                            </Authorized>
+                            <NotAuthorized>
+                                <div class="alert alert-warning">❌ 学生权限验证失败</div>
+                            </NotAuthorized>
+                        </AuthorizeView>
+                        
+                        <AuthorizeView Roles="Teacher" Context="teacherContext">
+                            <Authorized>
+                                <div class="alert alert-success">✅ 教师权限验证通过</div>
+                            </Authorized>
+                            <NotAuthorized>
+                                <div class="alert alert-warning">❌ 教师权限验证失败</div>
+                            </NotAuthorized>
+                        </AuthorizeView>
+                        
+                        <AuthorizeView Roles="Admin" Context="adminContext">
+                            <Authorized>
+                                <div class="alert alert-success">✅ 管理员权限验证通过</div>
+                            </Authorized>
+                            <NotAuthorized>
+                                <div class="alert alert-warning">❌ 管理员权限验证失败</div>
+                            </NotAuthorized>
+                        </AuthorizeView>
+                    </div>
+                </Authorized>
+                <NotAuthorized>
+                    <div class="alert alert-warning">用户未登录</div>
+                </NotAuthorized>
+            </AuthorizeView>
+        </div>
+    </div>
+
     @if (!string.IsNullOrEmpty(testResult))
     {
         <div class="row mt-3">
@@ -72,16 +144,32 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadAuthInfo();
+        // 不在预渲染阶段访问localStorage
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadAuthInfo();
+            StateHasChanged();
+        }
     }
 
     private async Task LoadAuthInfo()
     {
-        isAuthenticated = await AuthService.IsAuthenticatedAsync();
-        if (isAuthenticated)
+        try
         {
-            currentUser = await AuthService.GetCurrentUserAsync();
-            token = await AuthService.GetTokenAsync();
+            isAuthenticated = await AuthService.IsAuthenticatedAsync();
+            if (isAuthenticated)
+            {
+                currentUser = await AuthService.GetCurrentUserAsync();
+                token = await AuthService.GetTokenAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            testResult += $"加载认证信息时出错: {ex.Message}\n";
         }
     }
 
@@ -192,5 +280,142 @@
         }
         
         StateHasChanged();
+    }
+
+    private async Task TestApi()
+    {
+        testResult = "正在测试API连接...\n";
+        
+        try
+        {
+            var client = new HttpClient();
+            client.BaseAddress = new Uri("http://localhost:7186/");
+            
+            var response = await client.GetAsync("api/activities");
+            testResult += $"API响应状态: {response.StatusCode}\n";
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                testResult += $"API响应内容: {content.Substring(0, Math.Min(200, content.Length))}...\n";
+            }
+        }
+        catch (Exception ex)
+        {
+            testResult += $"API测试失败: {ex.Message}\n";
+        }
+    }
+
+    private async Task RefreshAuthState()
+    {
+        await LoadAuthInfo();
+        
+        // 检查本地存储中的token
+        try
+        {
+            var token = await AuthService.GetTokenAsync();
+            if (!string.IsNullOrEmpty(token))
+            {
+                testResult += $"本地存储中的Token: {token.Substring(0, Math.Min(50, token.Length))}...\n";
+                
+                // 解析token
+                var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
+                var jsonToken = handler.ReadJwtToken(token);
+                
+                testResult += $"Token过期时间: {jsonToken.ValidTo}\n";
+                testResult += $"当前时间: {DateTime.UtcNow}\n";
+                testResult += $"Token是否过期: {jsonToken.ValidTo < DateTime.UtcNow}\n";
+                
+                foreach (var claim in jsonToken.Claims)
+                {
+                    testResult += $"Claim: {claim.Type} = {claim.Value}\n";
+                }
+            }
+            else
+            {
+                testResult += "本地存储中没有找到Token\n";
+            }
+        }
+        catch (Exception ex)
+        {
+            testResult += $"检查Token时出错: {ex.Message}\n";
+        }
+        
+        StateHasChanged();
+    }
+
+    private void ClearAuthData()
+    {
+        isAuthenticated = false;
+        currentUser = null;
+        token = null;
+    }
+
+    private async Task TestLoginWithAdmin2()
+    {
+        try
+        {
+            testResult = "正在使用admin2账号登录...\n";
+            StateHasChanged();
+            
+            var loginDto = new LoginDto
+            {
+                Username = "admin2",
+                Password = "admin123"
+            };
+            
+            var result = await AuthService.LoginAsync(loginDto);
+            
+            if (result != null)
+            {
+                testResult += "登录成功！\n";
+                testResult += $"用户名: {result.User.Username}\n";
+                testResult += $"角色: {result.User.Role}\n";
+                testResult += $"Token: {result.Token.Substring(0, Math.Min(50, result.Token.Length))}...\n";
+                
+                // 刷新认证状态
+                await RefreshAuthState();
+            }
+            else
+            {
+                testResult += "登录失败！\n";
+            }
+        }
+        catch (Exception ex)
+        {
+            testResult += $"登录出错: {ex.Message}\n";
+        }
+        
+        StateHasChanged();
+    }
+
+    private async Task TestCreateActivity()
+    {
+        try
+        {
+            var testActivity = new AdminActivityDto
+            {
+                Title = "测试活动",
+                Description = "这是一个测试活动",
+                StartTime = DateTime.Now.AddDays(1),
+                EndTime = DateTime.Now.AddDays(1).AddHours(2),
+                Location = "测试地点",
+                MaxParticipants = 10,
+                Category = "学术讲座"
+            };
+
+            Console.WriteLine($"测试创建活动数据: {System.Text.Json.JsonSerializer.Serialize(testActivity)}");
+            var result = await AdminService.CreateActivityAsync(testActivity);
+            Console.WriteLine($"测试创建活动结果: {result}");
+            
+            testResult += $"\n测试创建活动结果: {result}";
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"测试创建活动异常: {ex.Message}");
+            testResult += $"\n测试创建活动异常: {ex.Message}";
+            StateHasChanged();
+        }
     }
 } 

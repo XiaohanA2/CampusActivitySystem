@@ -270,10 +270,10 @@
     private async Task OnSearchKeyUp()
     {
         searchTimer?.Dispose();
-        searchTimer = new Timer(async _ =>
+        searchTimer = new Timer(_ =>
         {
             currentPage = 1;
-            await InvokeAsync(async () =>
+            _ = InvokeAsync(async () =>
             {
                 await LoadUsers();
                 StateHasChanged();

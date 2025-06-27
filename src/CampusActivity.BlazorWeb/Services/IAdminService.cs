@@ -12,6 +12,9 @@ public interface IAdminService
 
     // 活动管理
     Task<PagedResult<AdminActivityDto>> GetAllActivitiesAsync(int page = 1, int pageSize = 20, string? search = null, int? categoryId = null, string? status = null);
+    Task<AdminActivityDto?> GetActivityByIdAsync(int id);
+    Task<bool> UpdateActivityAsync(AdminActivityDto activity);
+    Task<bool> CreateActivityAsync(AdminActivityDto activity);
     Task<bool> ForceDeleteActivityAsync(int id);
 
     // 系统统计
@@ -25,22 +28,6 @@ public class PagedResult<T>
     public int Page { get; set; }
     public int PageSize { get; set; }
     public int TotalPages { get; set; }
-}
-
-public class AdminActivityDto
-{
-    public int Id { get; set; }
-    public string Title { get; set; } = string.Empty;
-    public string Description { get; set; } = string.Empty;
-    public DateTime StartTime { get; set; }
-    public DateTime EndTime { get; set; }
-    public string Location { get; set; } = string.Empty;
-    public int MaxParticipants { get; set; }
-    public bool IsPublished { get; set; }
-    public DateTime CreatedAt { get; set; }
-    public string Category { get; set; } = string.Empty;
-    public string Creator { get; set; } = string.Empty;
-    public int RegistrationCount { get; set; }
 }
 
 public class SystemStatisticsDto
