@@ -82,18 +82,29 @@
                             <div class="row mb-3">
                                 <div class="col-md-6">
                                     <label class="form-label fw-bold">开始时间 <span class="text-danger">*</span></label>
-                                    <InputDate class="form-control" @bind-Value="activity.StartTime" required />
+                                    <input type="datetime-local" class="form-control" 
+                                           value="@startTimeString" 
+                                           @onchange="@((ChangeEventArgs e) => startTimeString = e.Value?.ToString() ?? "")" 
+                                           required />
+                                    <small class="text-muted">精确到时分</small>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label fw-bold">结束时间 <span class="text-danger">*</span></label>
-                                    <InputDate class="form-control" @bind-Value="activity.EndTime" required />
+                                    <input type="datetime-local" class="form-control" 
+                                           value="@endTimeString" 
+                                           @onchange="@((ChangeEventArgs e) => endTimeString = e.Value?.ToString() ?? "")" 
+                                           required />
+                                    <small class="text-muted">精确到时分</small>
                                 </div>
                             </div>
                             
                             <div class="mb-3">
                                 <label class="form-label fw-bold">报名截止时间 <span class="text-danger">*</span></label>
-                                <InputDate class="form-control" @bind-Value="activity.RegistrationDeadline" required />
-                                <small class="text-muted">学生必须在此时间前完成报名</small>
+                                <input type="datetime-local" class="form-control" 
+                                       value="@registrationDeadlineString" 
+                                       @onchange="@((ChangeEventArgs e) => registrationDeadlineString = e.Value?.ToString() ?? "")" 
+                                       required />
+                                <small class="text-muted">学生必须在此时间前完成报名（精确到时分）</small>
                             </div>
                             
                             <div class="mb-3">
@@ -149,6 +160,43 @@
     private IEnumerable<ActivityCategoryDto>? categories;
     private string selectedCategoryName => categories?.FirstOrDefault(c => c.Id == activity?.CategoryId)?.Name ?? "";
 
+    // 用于datetime-local输入的字符串属性
+    private string startTimeString
+    {
+        get => activity?.StartTime.ToString("yyyy-MM-ddTHH:mm") ?? "";
+        set
+        {
+            if (activity != null && DateTime.TryParse(value, out var date))
+            {
+                activity.StartTime = date;
+            }
+        }
+    }
+
+    private string endTimeString
+    {
+        get => activity?.EndTime.ToString("yyyy-MM-ddTHH:mm") ?? "";
+        set
+        {
+            if (activity != null && DateTime.TryParse(value, out var date))
+            {
+                activity.EndTime = date;
+            }
+        }
+    }
+
+    private string registrationDeadlineString
+    {
+        get => activity?.RegistrationDeadline.ToString("yyyy-MM-ddTHH:mm") ?? "";
+        set
+        {
+            if (activity != null && DateTime.TryParse(value, out var date))
+            {
+                activity.RegistrationDeadline = date;
+            }
+        }
+    }
+
     protected override async Task OnInitializedAsync()
     {
         try
@@ -192,6 +240,13 @@
         if (activity.RegistrationDeadline >= activity.StartTime)
         {
             await JSRuntime.InvokeVoidAsync("alert", "报名截止时间必须早于活动开始时间");
+            return;
+        }
+
+        // 确保报名截止时间至少比活动开始时间早30分钟
+        if ((activity.StartTime - activity.RegistrationDeadline).TotalMinutes < 30)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "报名截止时间应该至少比活动开始时间早30分钟，以便管理员有时间处理报名");
             return;
         }
 

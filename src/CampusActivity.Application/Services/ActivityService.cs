@@ -606,22 +606,47 @@ public class ActivityService : IActivityService
                 return new List<ActivityDto>();
             }
 
-            // 计算热门度：参与人数 + 最近创建加权
-            var popularActivities = activities
-                .Select(a => new
-                {
-                    Activity = a,
-                    PopularityScore = a.CurrentParticipants * 2.0 + 
-                                   (DateTime.UtcNow - a.CreatedAt).TotalDays < 7 ? 10 : 0 +
-                                   (a.MaxParticipants > 0 ? (double)a.CurrentParticipants / a.MaxParticipants * 100 : 0)
-                })
-                .OrderByDescending(x => x.PopularityScore)
-                .ThenByDescending(x => x.Activity.CreatedAt)
-                .Take(count)
-                .Select(x => x.Activity)
-                .ToList();
+            // 兜底策略：如果所有活动的参与人数都是0，就按创建时间排序
+            var hasParticipants = activities.Any(a => a.CurrentParticipants > 0);
+            List<Activity> popularActivities;
+
+            if (hasParticipants)
+            {
+                // 有参与者的情况：计算热门度：参与人数 + 最近创建加权
+                popularActivities = activities
+                    .Select(a => new
+                    {
+                        Activity = a,
+                        PopularityScore = a.CurrentParticipants * 2.0 + 
+                                       (DateTime.UtcNow - a.CreatedAt).TotalDays < 7 ? 10 : 0 +
+                                       (a.MaxParticipants > 0 ? (double)a.CurrentParticipants / a.MaxParticipants * 100 : 0)
+                    })
+                    .OrderByDescending(x => x.PopularityScore)
+                    .ThenByDescending(x => x.Activity.CreatedAt)
+                    .Take(count)
+                    .Select(x => x.Activity)
+                    .ToList();
+                    
+                _logger.LogInformation($"按热门度排序返回 {popularActivities.Count} 个活动");
+            }
+            else
+            {
+                // 兜底：没有人参与任何活动时，按创建时间倒序显示最新的活动
+                popularActivities = activities
+                    .OrderByDescending(a => a.CreatedAt)
+                    .Take(count)
+                    .ToList();
+                    
+                _logger.LogInformation($"兜底策略：按创建时间排序返回 {popularActivities.Count} 个最新活动");
+            }
 
             var activityDtos = _mapper.Map<IEnumerable<ActivityDto>>(popularActivities);
+            
+            // 输出调试信息
+            foreach (var dto in activityDtos)
+            {
+                _logger.LogInformation($"热门活动: {dto.Title}, 参与人数: {dto.CurrentParticipants}/{dto.MaxParticipants}");
+            }
 
             try
             {

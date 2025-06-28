@@ -442,34 +442,54 @@
             }
             else
             {
-                Console.WriteLine("热门活动API返回空，使用活动列表页的热度排序逻辑");
-                // 使用活动列表页的热度排序逻辑作为后备方案
+                Console.WriteLine("热门活动API返回空，使用报名人数排序作为兜底方案");
+                
+                // 兜底方案1：按照报名人数排序
                 var searchDto = new ActivitySearchDto
                 {
                     Page = 1,
                     PageSize = 8,
-                    SortBy = "Popularity",
+                    SortBy = "CurrentParticipants", // 按照当前参与人数排序
                     SortDescending = true
-                    // 移除 IsRegisterable 过滤器以显示所有活动
                 };
                 
                 var result = await ActivityService.GetActivitiesAsync(searchDto);
-                if (result != null && result.Items != null)
+                if (result != null && result.Items != null && result.Items.Any())
                 {
                     popularActivities = result.Items;
-                    Console.WriteLine($"成功从活动列表API加载了 {popularActivities.Count()} 个热门活动");
+                    Console.WriteLine($"成功从兜底方案1（按报名人数）加载了 {popularActivities.Count()} 个活动");
                 }
                 else
                 {
-                    Console.WriteLine("活动列表API也返回空");
-                    popularActivities = new List<ActivityDto>();
+                    Console.WriteLine("兜底方案1失败，使用最新活动作为最终兜底");
+                    
+                    // 兜底方案2：如果没有任何活动有报名人数，就显示最新创建的活动
+                    var fallbackSearchDto = new ActivitySearchDto
+                    {
+                        Page = 1,
+                        PageSize = 8,
+                        SortBy = "CreatedAt",
+                        SortDescending = true
+                    };
+                    
+                    var fallbackResult = await ActivityService.GetActivitiesAsync(fallbackSearchDto);
+                    if (fallbackResult != null && fallbackResult.Items != null)
+                    {
+                        popularActivities = fallbackResult.Items;
+                        Console.WriteLine($"成功从兜底方案2（最新活动）加载了 {popularActivities.Count()} 个活动");
+                    }
+                    else
+                    {
+                        Console.WriteLine("所有方案都失败，返回空列表");
+                        popularActivities = new List<ActivityDto>();
+                    }
                 }
             }
             
             // 输出活动详情进行调试
             foreach (var activity in popularActivities)
             {
-                Console.WriteLine($"活动: {activity.Title}, 分类: {activity.CategoryName}, 图片: {activity.ImageUrl}");
+                Console.WriteLine($"活动: {activity.Title}, 报名人数: {activity.CurrentParticipants}/{activity.MaxParticipants}, 分类: {activity.CategoryName}");
             }
         }
         catch (Exception ex)

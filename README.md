@@ -2,7 +2,7 @@
 
 ## 📋 项目简介
 
-校园活动管理系统是一个基于 .NET 9 的现代化企业级应用，专为高校校园活动管理而设计。系统采用分层架构设计，集成了 C++/CLI 混合编程和原生 C++ 模块，提供了完整的活动生命周期管理、智能推荐、用户权限控制等功能。
+校园活动管理系统是一个基于 .NET 8 的现代化企业级应用，专为高校校园活动管理而设计。系统采用分层架构设计，集成了 C++/CLI 混合编程和原生 C++ 模块，提供了完整的活动生命周期管理、智能推荐、用户权限控制等功能。
 
 ### 🎯 项目目标
 - 为高校提供一站式的校园活动管理平台
@@ -13,7 +13,7 @@
 ## 🏗️ 技术架构
 
 ### 核心技术栈
-- **后端框架**: ASP.NET Core 9.0
+- **后端框架**: ASP.NET Core 8.0
 - **前端框架**: Blazor Server
 - **数据库**: MySQL 8.0 + Entity Framework Core
 - **缓存**: Redis 6.0+
@@ -113,7 +113,7 @@
 ## 🛠️ 开发环境要求
 
 ### 必需软件
-- **.NET 9 SDK**
+- **.NET 8 SDK**
 - **Visual Studio 2022** (用于C++编译)
 - **MySQL 8.0+**
 - **Redis 6.0+**
@@ -125,6 +125,20 @@
 
 ## 🚀 快速开始
 
+### 自动化安装（推荐）
+```powershell
+# 克隆项目
+git clone <repository-url>
+cd CampusActivitySystem
+
+# 运行安装脚本（自动配置环境）
+.\install.ps1
+
+# 启动系统
+.\start.ps1
+```
+
+### 手动安装
 ### 1. 克隆项目
 ```powershell
 git clone <repository-url>
@@ -157,16 +171,22 @@ CREATE DATABASE CampusActivityDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_c
 ```powershell
 # 启动 Web API
 cd src/CampusActivity.WebAPI
-dotnet run --urls "https://localhost:7000"
+dotnet run
 
 # 启动 Blazor 前端
 cd src/CampusActivity.BlazorWeb
-dotnet run --urls "https://localhost:7001"
+dotnet run
+```
+
+或者使用启动脚本：
+```powershell
+# 使用自动化启动脚本
+.\start.ps1
 ```
 
 ### 6. 访问系统
-- **前端界面**: https://localhost:7001
-- **API文档**: https://localhost:7000/swagger
+- **前端界面**: http://localhost:7150
+- **API文档**: http://localhost:7186/swagger
 - **默认管理员**: admin / admin123
 
 ## 📁 项目结构
@@ -236,6 +256,67 @@ private static extern double CalculateSimilarity(
 - **数据验证**: 输入数据的安全验证
 - **SQL注入防护**: 参数化查询
 
+## 🎛️ 管理脚本
+
+系统提供了完整的自动化管理脚本，简化部署和运维工作：
+
+### 📦 构建脚本 (build.ps1)
+```powershell
+# 基本构建
+.\build.ps1
+
+# 调试版本构建
+.\build.ps1 Debug
+
+# 清理后构建
+.\build.ps1 Release -Clean
+
+# 查看帮助
+.\build.ps1 -Help
+```
+
+### ⚙️ 安装脚本 (install.ps1)
+```powershell
+# 开发环境安装
+.\install.ps1
+
+# 生产环境安装
+.\install.ps1 -Environment Production
+
+# 跳过数据库初始化
+.\install.ps1 -SkipDatabase
+
+# 查看帮助
+.\install.ps1 -Help
+```
+
+### 🚀 启动脚本 (start.ps1)
+```powershell
+# 启动开发环境
+.\start.ps1
+
+# 启动生产环境
+.\start.ps1 -Environment Production
+
+# 启动后等待用户输入
+.\start.ps1 -WaitForExit
+
+# 查看帮助
+.\start.ps1 -Help
+```
+
+### 🛑 停止脚本 (stop.ps1)
+```powershell
+# 正常停止
+.\stop.ps1
+
+# 强制停止
+.\stop.ps1 -Force
+
+# 查看帮助
+.\stop.ps1 -Help
+```
+
 ## 🧪 测试
 
 ### 运行测试
@@ -248,7 +329,7 @@ dotnet test src/CampusActivity.Tests/
 ```
 
 ### API测试
-- 访问 https://localhost:7000/swagger 查看API文档
+- 访问 http://localhost:7186/swagger 查看API文档
 - 使用Swagger UI进行API测试
 - 支持JWT认证的API调用
 
@@ -258,109 +339,22 @@ dotnet test src/CampusActivity.Tests/
 - [部署运行指南](docs/部署运行指南.md)
 - [项目结构说明](docs/项目结构说明.md)
 
-## 🤝 贡献指南
-
-1. Fork 项目
-2. 创建功能分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 打开 Pull Request
-
-## 📄 许可证
-
-本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情
-
-## 📞 联系方式
-
-- 项目维护者: [您的姓名]
-- 邮箱: [您的邮箱]
-- 项目链接: [项目GitHub地址]
-
 ## 📋 项目提交清单
 
 ### 文件清单
-- [ ] 完整的源代码目录(src/)
-- [ ] 完整的文档目录(docs/)
-- [ ] 解决方案文件(CampusActivitySystem.sln)
-- [ ] 构建脚本(build.ps1)
-- [ ] 安装脚本(install.ps1)
-- [ ] 项目说明(README.md)
-- [ ] 数据库初始化脚本(database/init.sql)
-- [ ] Git忽略文件(.gitignore)
+
+- [x] 完整的源代码目录(src/)
+- [x] 完整的文档目录(docs/)
+- [x] 解决方案文件(CampusActivitySystem.sln)
+- [x] 构建脚本(build.ps1) - 自动化构建系统
+- [x] 安装脚本(install.ps1) - 自动化环境配置
+- [x] 启动脚本(start.ps1) - 一键启动服务
+- [x] 停止脚本(stop.ps1) - 一键停止服务
+- [x] 项目说明(README.md)
+- [x] Git忽略文件(.gitignore)
 
 ### 文档清单
 - [ ] README.md - 项目说明
 - [ ] docs/部署运行指南.md - 部署指南
 - [ ] docs/数据库配置指南.md - 数据库配置
 - [ ] docs/项目结构说明.md - 项目结构
-
-### 配置清单
-- [ ] 数据库连接配置
-- [ ] JWT认证配置
-- [ ] Redis缓存配置
-- [ ] 项目依赖配置
-
-### 验证清单
-- [ ] 项目可以成功构建
-- [ ] 基本功能可以正常运行
-- [ ] 文档内容准确完整
-- [ ] 代码质量符合要求
-
-## 🚀 提交说明
-
-### 提交格式
-- **项目名称**: 校园活动管理系统
-- **版本**: v1.0.0
-- **提交日期**: [当前日期]
-- **提交人员**: [提交人员姓名]
-
-### 提交内容
-1. **源代码**: 完整的8个程序集项目
-2. **文档**: 详细的项目说明和部署指南
-3. **配置**: 完整的配置文件
-4. **脚本**: 构建和安装脚本
-
-### 技术亮点
-1. **8个程序集**: 超越要求的5个程序集
-2. **C++/CLI混合编程**: 智能推荐引擎
-3. **原生C++模块**: 高性能数据分析
-4. **现代化Web技术**: Blazor Server + Bootstrap 5
-5. **企业级架构**: 完整的分层架构设计
-
-## 📋 部署检查清单
-
-### 环境检查
-- [ ] .NET 9 SDK 已安装
-- [ ] Visual Studio 2022 已安装
-- [ ] MySQL 8.0+ 已安装并运行
-- [ ] Redis 6.0+ 已安装并运行
-- [ ] PowerShell 可用
-
-### 数据库检查
-- [ ] 数据库已创建
-- [ ] 用户权限已配置
-- [ ] 连接字符串正确
-- [ ] 数据库迁移已执行
-
-### 应用检查
-- [ ] 项目构建成功
-- [ ] 配置文件已更新
-- [ ] Web API 启动成功
-- [ ] Blazor 前端启动成功
-
-### 功能检查
-- [ ] API 文档可访问
-- [ ] 用户注册功能正常
-- [ ] 用户登录功能正常
-- [ ] 活动管理功能正常
-- [ ] 前端界面正常显示
-
-### 安全检查
-- [ ] HTTPS 配置正确
-- [ ] JWT 认证正常
-- [ ] 数据库安全配置
-- [ ] 防火墙规则配置
-
----
-
-**注意**: 本项目展示了现代企业级应用开发的最佳实践，包括分层架构、混合编程、安全认证、性能优化等技术要点，适合作为学习和演示项目使用。
